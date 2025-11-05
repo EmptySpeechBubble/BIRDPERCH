@@ -2146,7 +2146,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const STAR_COUNT = 100;
         const WORM_WIGGLE_SPEED = 0.1;
         const MAX_RATS = 5; // Reduced from 6
-        const RAT_KING_FORMATION_CHANCE = 0.03; // FIXED: Much rarer (3% instead of 10%)
+        const RAT_KING_FORMATION_CHANCE = 0.08; // INCREASED: More common (8% instead of 3%)
         const MAX_SQUIRRELS = 3; // Reduced from 4
         const TWIG_SPAWN_RATE = 10000; // Every 10 (?) seconds
         const ANT_SPEED = 0.6;
@@ -3147,8 +3147,8 @@ function createFlower(x, y) {
             // Check if UFO already exists or on cooldown
             if (ufo || Date.now() < ufoEncounterCooldown) return;
 
-            // SUPER RARE spawn chance (0.0002% = once every 2-3 hours at 60fps)
-            if (Math.random() > 0.000002) return;
+            // RARE spawn chance (0.001% = once every 15-20 minutes at 60fps) - INCREASED from 0.0002%
+            if (Math.random() > 0.00001) return;
 
             // Find potential targets
             const potentialTargets = [];
@@ -6472,7 +6472,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         ctx.fillStyle = '#8B4513'; // Darker brown for platform
                         ctx.fillRect(
                             this.x - crossbeamWidth/2,
-                            houseBottom - this.poleHeight - crossbeamHeight,
+                            houseBottom - crossbeamHeight, // FIXED: Connect to pole top (houseBottom = poleTop)
                             crossbeamWidth,
                             crossbeamHeight
                         );
@@ -6482,14 +6482,14 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         // Left bracket
                         ctx.fillRect(
                             this.x - crossbeamWidth/2 + 3,
-                            houseBottom - this.poleHeight,
+                            houseBottom, // FIXED: Start at pole top
                             3,
                             6
                         );
                         // Right bracket
                         ctx.fillRect(
                             this.x + crossbeamWidth/2 - 6,
-                            houseBottom - this.poleHeight,
+                            houseBottom, // FIXED: Start at pole top
                             3,
                             6
                         );
@@ -6497,8 +6497,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         // PERCH SPOTS: Store perch locations for birds to use
                         // Birds will be able to land on the left and right ends of the T-beam
                         this.constructionPerches = [
-                            { x: this.x - crossbeamWidth/3, y: houseBottom - this.poleHeight - crossbeamHeight - 2 },
-                            { x: this.x + crossbeamWidth/3, y: houseBottom - this.poleHeight - crossbeamHeight - 2 }
+                            { x: this.x - crossbeamWidth/3, y: houseBottom - crossbeamHeight - 2 }, // FIXED
+                            { x: this.x + crossbeamWidth/3, y: houseBottom - crossbeamHeight - 2 } // FIXED
                         ];
                     }
 
@@ -6509,7 +6509,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         ctx.fillStyle = '#8B4513';
                         ctx.fillRect(
                             this.x - platformWidth/2,
-                            houseBottom - this.poleHeight - 4,
+                            houseBottom - 4, // FIXED: Connect to pole top
                             platformWidth,
                             4
                         );
@@ -6520,7 +6520,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         ctx.fillStyle = '#A0522D'; // Saddle brown
                         ctx.fillRect(
                             this.x - this.width/2,
-                            houseBottom - this.poleHeight - 4 - partialHeight,
+                            houseBottom - 4 - partialHeight, // FIXED: Build from platform
                             this.width,
                             partialHeight
                         );
@@ -6535,9 +6535,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         const roofCompletionRatio = (completionRatio - 0.7) / 0.3; // Scale to 0-1
                         ctx.fillStyle = '#654321'; // Dark brown roof
                         ctx.beginPath();
-                        ctx.moveTo(this.x - this.width/2 - 5, houseBottom - this.poleHeight - 4 - this.height);
-                        ctx.lineTo(this.x + this.width/2 * roofCompletionRatio, houseBottom - this.poleHeight - 4 - this.height);
-                        ctx.lineTo(this.x, houseBottom - this.poleHeight - 4 - this.height - this.roofHeight * roofCompletionRatio);
+                        ctx.moveTo(this.x - this.width/2 - 5, houseBottom - 4 - this.height); // FIXED
+                        ctx.lineTo(this.x + this.width/2 * roofCompletionRatio, houseBottom - 4 - this.height); // FIXED
+                        ctx.lineTo(this.x, houseBottom - 4 - this.height - this.roofHeight * roofCompletionRatio); // FIXED
                         ctx.closePath();
                         ctx.fill();
                     }
@@ -9951,7 +9951,7 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 }
 
 
-// Enhanced tree collision avoidance
+// Enhanced tree collision avoidance - GENTLER to prevent rapid back-and-forth
 if (this.state === BIRD_STATES.FLYING) {
     // Initialize emergency path cooldown if not exists
     if (!this.emergencyPathCooldown) this.emergencyPathCooldown = 0;
@@ -9971,20 +9971,20 @@ if (this.state === BIRD_STATES.FLYING) {
             // Check if we're at trunk height (not in the leafy part)
             const trunkTop = tree.y - tree.trunkHeight * tree.scale;
             if (this.y > trunkTop) {
-                // Apply stronger horizontal force away from tree
+                // Apply GENTLE horizontal force away from tree - REDUCED from 0.1 to 0.05
                 const pushDirection = this.x < tree.x ? -1 : 1;
-                const pushStrength = 0.1; // Stronger push than normal
+                const pushStrength = 0.05; // Gentler push to prevent rapid direction changes
 
                 this.applyForce({
                     x: pushDirection * pushStrength,
-                    y: -0.05 // Always push slightly upward to help escape
+                    y: -0.03 // Gentler upward push (was -0.05)
                 });
 
                 // If extremely close to tree, make an emergency maneuver
-                if (distToTree < treeWidth * 0.8) {
-                    // Emergency evasion - stronger push
-                    this.velocity.x = pushDirection * this.baseSpeed;
-                    this.velocity.y = -this.baseSpeed * 0.5;
+                if (distToTree < treeWidth * 0.7) { // TIGHTENED: Only trigger if very close (was 0.8)
+                    // Emergency evasion - GENTLER push
+                    this.velocity.x += pushDirection * this.baseSpeed * 0.3; // GENTLER: Add to velocity instead of replacing
+                    this.velocity.y += -this.baseSpeed * 0.2; // GENTLER upward push
 
                     // Update direction
                     this.direction = pushDirection;
@@ -9993,8 +9993,8 @@ if (this.state === BIRD_STATES.FLYING) {
                     if (!this.treeStuckTime) this.treeStuckTime = 0;
                     this.treeStuckTime += 16;
 
-                    // FIXED: Increased threshold and added cooldown to prevent rapid switching
-                    if (this.treeStuckTime > 1200 && this.emergencyPathCooldown <= 0) {
+                    // INCREASED threshold and cooldown to prevent rapid path switching
+                    if (this.treeStuckTime > 3000 && this.emergencyPathCooldown <= 0) { // INCREASED from 1200ms to 3000ms
                         // Clear path and create a new one away from the tree
                         this.path = [];
                         this.pathIndex = 0;
@@ -10010,9 +10010,9 @@ if (this.state === BIRD_STATES.FLYING) {
                         this.generatePath(targetX, targetY);
                         debugLog(`Emergency evasion from tree at (${tree.x}) - heading to (${targetX}, ${targetY})`);
 
-                        // FIXED: Reset stuck time and set cooldown to prevent rapid re-triggering
+                        // FIXED: Reset stuck time and set LONGER cooldown to prevent rapid re-triggering
                         this.treeStuckTime = 0;
-                        this.emergencyPathCooldown = 2000; // 2 second cooldown before next emergency path
+                        this.emergencyPathCooldown = 5000; // INCREASED from 2000ms to 5000ms (5 second cooldown)
                     }
                 }
             }
@@ -21949,19 +21949,24 @@ function drawFullScene() {
             // IMPROVED: Create initial trees with better clustering and responsive count
             // Scale tree count based on screen width (more trees on wider screens)
             const baseTreeCount = 5 + Math.floor(Math.random() * 3);
-            const widthFactor = Math.max(1, canvas.width / 1920); // 1920px baseline
-            const initialTreeCount = Math.floor(baseTreeCount * widthFactor);
+            const widthFactor = canvas.width / 1920; // 1920px baseline, NO Math.max to allow mobile reduction
+            const initialTreeCount = Math.max(3, Math.floor(baseTreeCount * widthFactor)); // At least 3 trees
 
             // Create tree clusters for more natural distribution with MORE VARIETY
             const clusterCount = Math.floor(initialTreeCount / 2.5); // 2-3 trees per cluster
             const clusters = [];
 
             for (let c = 0; c < clusterCount; c++) {
+                // MOBILE FIX: Scale random spread based on screen width to prevent overlap
+                const spreadFactor = Math.max(0.5, canvas.width / 1920); // Scale spread with screen width
+                const randomSpread = 300 * spreadFactor; // Smaller spread on mobile
+
                 // More varied cluster positioning - spread out further
                 const clusterX = 100 + (c * (canvas.width - 200) / clusterCount) +
-                    (Math.random() - 0.5) * 300; // Increased from 200 to 300 for more spread
+                    (Math.random() - 0.5) * randomSpread; // MOBILE FIX: Scaled spread
 
                 // Random cluster variants: single big tree, small cluster, or large cluster
+                // MOBILE FIX: Reduce cluster sizes on smaller screens
                 const clusterVariant = Math.random();
                 let clusterSize, clusterSpacing;
 
@@ -21970,13 +21975,13 @@ function drawFullScene() {
                     clusterSize = 1;
                     clusterSpacing = 0;
                 } else if (clusterVariant < 0.60) {
-                    // 35% chance: Small cluster (2-3 trees, close together)
-                    clusterSize = 2 + Math.floor(Math.random() * 2);
-                    clusterSpacing = 120; // Closer together
+                    // 35% chance: Small cluster (2-3 trees on desktop, 2 on mobile)
+                    clusterSize = canvas.width < 768 ? 2 : (2 + Math.floor(Math.random() * 2)); // MOBILE FIX
+                    clusterSpacing = 120 * spreadFactor; // MOBILE FIX: Scale spacing
                 } else {
-                    // 40% chance: Large cluster (4-6 trees, more spread)
-                    clusterSize = 4 + Math.floor(Math.random() * 3);
-                    clusterSpacing = 200; // More spread out
+                    // 40% chance: Large cluster (4-6 trees on desktop, 2-3 on mobile)
+                    clusterSize = canvas.width < 768 ? (2 + Math.floor(Math.random() * 2)) : (4 + Math.floor(Math.random() * 3)); // MOBILE FIX
+                    clusterSpacing = 200 * spreadFactor; // MOBILE FIX: Scale spacing
                 }
 
                 clusters.push({ x: clusterX, size: clusterSize, spacing: clusterSpacing });
