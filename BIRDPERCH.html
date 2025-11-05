@@ -3147,8 +3147,9 @@ function createFlower(x, y) {
             // Check if UFO already exists or on cooldown
             if (ufo || Date.now() < ufoEncounterCooldown) return;
 
-            // RARE spawn chance (0.001% = once every 15-20 minutes at 60fps) - INCREASED from 0.0002%
-            if (Math.random() > 0.00001) return;
+            // RARE spawn chance (approx once every 60 minutes at 60fps)
+            // Calculation: 1 / (60 min * 60 sec * 60 fps) = 1/216000 ≈ 0.000005
+            if (Math.random() > 0.000005) return;
 
             // Find potential targets
             const potentialTargets = [];
@@ -9369,10 +9370,10 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
             closestBirdhouse = partnerBirdhouse;
             debugLog(`💕 ${getBirdName(this)} going to sleep with partner in shared birdhouse`);
 
-            // Fly to birdhouse
+            // Fly to birdhouse (entrance level)
             this.state = BIRD_STATES.FLYING;
             this.stateTimer = 0;
-            this.generatePath(partnerBirdhouse.x, partnerBirdhouse.y - 20);
+            this.generatePath(partnerBirdhouse.x, partnerBirdhouse.y - partnerBirdhouse.poleHeight - 20); // FIXED: Fly to house level
             return true;
         }
     }
@@ -9399,16 +9400,16 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
     }
     
     if (closestBirdhouse) {
-        // Generate path to birdhouse
+        // Generate path to birdhouse (entrance level)
         this.generatePath(
-            closestBirdhouse.x, 
-            closestBirdhouse.y - 20 // Position above the birdhouse
+            closestBirdhouse.x,
+            closestBirdhouse.y - closestBirdhouse.poleHeight - 20 // FIXED: Fly to house level (was just -20)
         );
-        
+
         // Set state to flying toward birdhouse
         this.state = BIRD_STATES.FLYING;
         this.stateTimer = 0;
-        
+
         // Remember target birdhouse
         this.targetBirdhouse = closestBirdhouse;
         debugLog(`Bird heading to birdhouse at (${closestBirdhouse.x})`);
@@ -11183,9 +11184,9 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                         // FIXED: Check if bird is in a birdhouse
                         const myBirdhouse = birdhouses.find(bh => bh.occupants.includes(this));
                         if (myBirdhouse) {
-                            // Bird is in a birdhouse - stay at birdhouse position
+                            // Bird is in a birdhouse - stay at birdhouse position (INSIDE the house)
                             this.x = myBirdhouse.x + (Math.random() - 0.5) * 10; // Slight movement
-                            this.y = myBirdhouse.y - myBirdhouse.poleHeight + 10;
+                            this.y = myBirdhouse.y - myBirdhouse.poleHeight - 20; // FIXED: Inside house (was +10, now -20)
                             this.velocity = { x: 0, y: 0 };
                             this.acceleration = { x: 0, y: 0 };
                         } else {
@@ -11258,9 +11259,9 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                         // FIXED: Check if sleeping in a birdhouse
                         const sleepingBirdhouse = birdhouses.find(bh => bh.occupants.includes(this));
                         if (sleepingBirdhouse) {
-                            // Stay at birdhouse position while sleeping
+                            // Stay at birdhouse position while sleeping (INSIDE the house)
                             this.x = sleepingBirdhouse.x + (Math.random() - 0.5) * 5;
-                            this.y = sleepingBirdhouse.y - sleepingBirdhouse.poleHeight + 10;
+                            this.y = sleepingBirdhouse.y - sleepingBirdhouse.poleHeight - 20; // FIXED: Inside house (was +10, now -20)
                         }
 
                         // Wake up if:
@@ -11719,7 +11720,12 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
 if (this.pathIndex >= this.path.length) {
     // ADDED: Check if we're heading to a birdhouse
     if (this.targetBirdhouse && birdhouses.indexOf(this.targetBirdhouse) !== -1) {
-        const birdhouseDist = distance(this.x, this.y, this.targetBirdhouse.x, this.targetBirdhouse.y - 20);
+        const birdhouseDist = distance(
+            this.x,
+            this.y,
+            this.targetBirdhouse.x,
+            this.targetBirdhouse.y - this.targetBirdhouse.poleHeight - 20 // FIXED: Check distance to house level
+        );
 
         if (birdhouseDist < 30) {
             // Reached birdhouse - become an occupant!
