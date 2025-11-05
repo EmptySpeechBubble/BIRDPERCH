@@ -2947,6 +2947,43 @@ function createFlower(x, y) {
             });
         }
 
+        // Draw food caches with subtle markers
+        function drawFoodCaches() {
+            for (const cache of foodCaches) {
+                if (cache.retrieved) continue;
+
+                // Draw subtle ground disturbance marker
+                ctx.save();
+                ctx.globalAlpha = 0.4;
+
+                // Darker patch of ground
+                ctx.fillStyle = '#654321';
+                ctx.beginPath();
+                ctx.ellipse(cache.x, cache.y, 8, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Small mound indicator
+                ctx.fillStyle = '#7D5A3B';
+                ctx.beginPath();
+                ctx.ellipse(cache.x, cache.y - 2, 5, 3, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Tiny hint of food type color peeking through
+                if (cache.type === 'nut') {
+                    ctx.fillStyle = '#8B4513';
+                } else if (cache.type === 'seed') {
+                    ctx.fillStyle = '#F5DEB3';
+                } else {
+                    ctx.fillStyle = '#D2B48C';
+                }
+                ctx.beginPath();
+                ctx.arc(cache.x + 2, cache.y, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+        }
+
         // Find nearest cache for an owner
         function findNearestCache(x, y, ownerId) {
             let nearest = null;
@@ -6354,7 +6391,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 this.isComplete = false;
                 this.health = 100;
                 this.occupants = [];
-                this.maxOccupants = 2;
+                this.maxOccupants = 4; // Increased from 2 to make birdhouses more valuable
                 
                 // House properties
                 this.width = 35;
@@ -6626,7 +6663,16 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 this.birdType = birdType || BIRD_TYPES[Math.floor(Math.random() * BIRD_TYPES.length)];
                 this.nestObj = nestObj;
                 this.createdOnDay = dayNightCycleCount; // Track which in-game day the egg was laid
-                this.cyclesToHatch = 1 + Math.random(); // 1-2 in-game day cycles (4-8 minutes real-time)
+
+                // Base hatch time: 1-2 in-game day cycles (4-8 minutes real-time)
+                this.cyclesToHatch = 1 + Math.random();
+
+                // PAIR BONDING BONUS: 20% faster hatch rate if parent has a pair bond partner
+                if (parentBird && parentBird.pairBondPartner) {
+                    this.cyclesToHatch *= 0.8; // 20% faster hatching
+                    debugLog(`Egg has pair-bonded parents - will hatch 20% faster!`);
+                }
+
                 this.size = 8; // Egg size
                 this.wobbleTimer = Math.random() * Math.PI * 2; // For subtle animation
                 this.color = '#F5F5DC'; // Beige/cream color
@@ -6746,13 +6792,51 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     ctx.fill();
                 }
 
-                // Subtle wobble near hatching time (when 80% through incubation)
+                // Visual progress indicator: wobble and cracks near hatching time
                 const cyclesElapsed = dayNightCycleCount - this.createdOnDay;
-                if (cyclesElapsed > this.cyclesToHatch * 0.8) {
-                    const wobble = Math.sin(this.wobbleTimer * 4) * 1;
+                const hatchProgress = cyclesElapsed / this.cyclesToHatch;
+
+                // Wobble increases as hatching approaches (starts at 60%)
+                if (hatchProgress > 0.6) {
+                    const wobbleIntensity = (hatchProgress - 0.6) / 0.4; // 0 to 1
+                    const wobble = Math.sin(this.wobbleTimer * 4) * wobbleIntensity * 2;
                     ctx.save();
                     ctx.translate(wobble, 0);
                     ctx.restore();
+                }
+
+                // Draw cracks based on progress
+                ctx.strokeStyle = 'rgba(100, 80, 60, 0.6)';
+                ctx.lineWidth = 0.8;
+
+                // Small cracks at 70%
+                if (hatchProgress > 0.7) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 2, this.y - 4);
+                    ctx.lineTo(this.x + 4, this.y - 6);
+                    ctx.stroke();
+                }
+
+                // More cracks at 85%
+                if (hatchProgress > 0.85) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x - 3, this.y);
+                    ctx.lineTo(this.x - 5, this.y + 3);
+                    ctx.stroke();
+
+                    ctx.beginPath();
+                    ctx.moveTo(this.x + 3, this.y + 2);
+                    ctx.lineTo(this.x + 5, this.y + 4);
+                    ctx.stroke();
+                }
+
+                // Heavy cracking at 95%
+                if (hatchProgress > 0.95) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.x, this.y - 6);
+                    ctx.lineTo(this.x + 2, this.y - 2);
+                    ctx.lineTo(this.x - 2, this.y + 2);
+                    ctx.stroke();
                 }
             }
 
@@ -6814,7 +6898,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
         }
         
         // Baby birds die if not fed for longer
-        if (this.timeSinceLastMeal > 420) { // Increased from 120
+        if (this.timeSinceLastMeal > 600) { // Increased to 600 seconds (10 minutes) for better survival rate
             debugLog(`Baby bird at (${this.x}, ${this.y}) died from lack of food after ${this.timeSinceLastMeal.toFixed(0)} seconds.`);
             return true; // Should be removed
         }
@@ -8329,8 +8413,8 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
             constructor(isWild = false, birdTypeOverride = null, startX = null, startY = null) {
         this.birdType = birdTypeOverride || BIRD_TYPES[Math.floor(Math.random() * BIRD_TYPES.length)];
 
-        // Rare color variant system (1.5% chance - MUCH RARER for special colors)
-        this.isRareVariant = Math.random() < 0.015;
+        // Rare color variant system (0.3% chance - MUCH RARER for special colors)
+        this.isRareVariant = Math.random() < 0.003;
         if (this.isRareVariant) {
             const rareVariants = [
                 { name: 'Albino', bodyColor: '#FFFFFF', wingColor: '#F5F5F5' },
@@ -8912,6 +8996,46 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                             }
 
                             debugLog(`Bird found ${bush.fruitType}s on bush at (${bush.x}, ${bush.y})`);
+                            break;
+                        }
+                    }
+                }
+
+                // NEW: Check for food caches (10% chance to discover squirrel caches)
+                if (!foundFood && Math.random() < 0.1) {
+                    for (const cache of foodCaches) {
+                        if (!cache.retrieved &&
+                            distance(this.x, this.y, cache.x, cache.y) < visionRadius * 0.8 &&
+                            !this.isDangerZone(cache.x, cache.y)) {
+                            // Bird discovers a cache! Convert it to regular food
+                            const foodType = cache.type === 'nut' ? 'seed' : cache.type; // Nuts become seeds for birds
+                            foodItems.push({
+                                x: cache.x + (Math.random() - 0.5) * 10,
+                                y: cache.y + (Math.random() - 0.5) * 10,
+                                type: foodType,
+                                timer: 0,
+                                playerAdded: false
+                            });
+
+                            // Mark cache as retrieved
+                            cache.retrieved = true;
+
+                            debugLog(`Bird discovered food cache at (${cache.x}, ${cache.y})!`);
+
+                            // Target the newly uncovered food
+                            this.target = {
+                                type: 'food',
+                                x: cache.x,
+                                y: cache.y
+                            };
+                            this.state = BIRD_STATES.HUNTING;
+                            this.stateTimer = 0;
+                            foundFood = true;
+
+                            // Make excited food call
+                            if (Math.random() < 0.5) {
+                                this.makeFoodCall(cache.x, cache.y);
+                            }
                             break;
                         }
                     }
@@ -9912,8 +10036,11 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                     return true; // Bird dies of hunger
                 }
                 
-                // Wild birds leave after a while
-                if (this.isWild && this.stateTimer > 30000) {
+                // Wild birds leave after a while (60-90 seconds), unless actively feeding/bathing
+                const wildBirdStayDuration = 60000 + Math.random() * 30000; // 60-90 seconds
+                const isActivelyFeeding = this.state === BIRD_STATES.EATING || this.state === BIRD_STATES.PECKING;
+                const isActivelyBathing = this.state === BIRD_STATES.BATHING || this.state === BIRD_STATES.DRINKING;
+                if (this.isWild && this.stateTimer > wildBirdStayDuration && !isActivelyFeeding && !isActivelyBathing) {
                     return true; // Bird leaves the scene
                 }
                 
@@ -9963,12 +10090,13 @@ if (this.state === BIRD_STATES.FLYING) {
     }
 
     // Check for nearby trees that might cause problems
+    const responsiveScale = getResponsiveScale();
     for (const tree of trees) {
         const distToTree = Math.abs(this.x - tree.x);
         const treeWidth = tree.trunkWidth * tree.scale;
 
-        // If very close to a tree trunk horizontally
-        if (distToTree < treeWidth * 1.5) {
+        // If very close to a tree trunk horizontally (RESPONSIVE)
+        if (distToTree < treeWidth * 1.5 * responsiveScale) {
             // Check if we're at trunk height (not in the leafy part)
             const trunkTop = tree.y - tree.trunkHeight * tree.scale;
             if (this.y > trunkTop) {
@@ -9981,8 +10109,8 @@ if (this.state === BIRD_STATES.FLYING) {
                     y: -0.03 // Gentler upward push (was -0.05)
                 });
 
-                // If extremely close to tree, make an emergency maneuver
-                if (distToTree < treeWidth * 0.7) { // TIGHTENED: Only trigger if very close (was 0.8)
+                // If extremely close to tree, make an emergency maneuver (RESPONSIVE)
+                if (distToTree < treeWidth * 0.7 * responsiveScale) { // TIGHTENED: Only trigger if very close (was 0.8)
                     // Emergency evasion - GENTLER push
                     this.velocity.x += pushDirection * this.baseSpeed * 0.3; // GENTLER: Add to velocity instead of replacing
                     this.velocity.y += -this.baseSpeed * 0.2; // GENTLER upward push
@@ -10000,12 +10128,12 @@ if (this.state === BIRD_STATES.FLYING) {
                         this.path = [];
                         this.pathIndex = 0;
 
-                        // FIXED: Target position MUCH farther away with random variation
-                        const escapeDistance = 250 + Math.random() * 100; // 250-350px away
+                        // FIXED: Target position MUCH farther away with random variation (RESPONSIVE)
+                        const escapeDistance = (250 + Math.random() * 100) * responsiveScale; // 250-350px away, scaled
                         const targetX = tree.x + (pushDirection * escapeDistance);
 
-                        // FIXED: Fly higher to clear tree tops with random variation
-                        const flyHeight = 80 + Math.random() * 40; // 80-120px above current position
+                        // FIXED: Fly higher to clear tree tops with random variation (RESPONSIVE)
+                        const flyHeight = (80 + Math.random() * 40) * responsiveScale; // 80-120px above current position, scaled
                         const targetY = Math.max(50, this.y - flyHeight);
 
                         this.generatePath(targetX, targetY);
@@ -11048,6 +11176,27 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                 foodItems.splice(i, 1);
                                 this.hunger = Math.max(0, this.hunger - 100); // Increased from 80
                                 debugLog(`Bird found and ate food while foraging.`);
+
+                                // PAIR BONDING BENEFIT: Share food with hungry partner
+                                if (this.pairBondPartner && birds.indexOf(this.pairBondPartner) !== -1) {
+                                    const partner = this.pairBondPartner;
+                                    const distToPartner = distance(this.x, this.y, partner.x, partner.y);
+                                    // If partner is nearby and hungry, share some food benefit
+                                    if (distToPartner < 150 && partner.hunger > 150 && Math.random() < 0.4) {
+                                        partner.hunger = Math.max(0, partner.hunger - 50);
+                                        debugLog(`${getBirdName(this)} shared food with partner ${getBirdName(partner)}!`);
+
+                                        // Visual effect for partner feeding
+                                        specialEffects.push({
+                                            x: partner.x,
+                                            y: partner.y - 10,
+                                            type: 'partner-feeding',
+                                            timer: 0,
+                                            duration: 1000,
+                                            emoji: '💕'
+                                        });
+                                    }
+                                }
                             }
                         }
                         
@@ -12558,7 +12707,51 @@ if (this.pathIndex >= this.path.length) {
         0, 0, Math.PI * 2
     );
     ctx.fill();
-                
+
+                // Add shimmer effect for rare variant birds
+                if (this.isRareVariant && !mushroomMode) {
+                    ctx.save();
+                    // Shimmer animation based on time
+                    const shimmerPhase = (Date.now() / 1000) % 2; // 2 second cycle
+                    const shimmerIntensity = Math.abs(Math.sin(shimmerPhase * Math.PI));
+
+                    // Radial gradient for shimmer
+                    const shimmerGrad = ctx.createRadialGradient(
+                        this.x, this.y + yOffset, 0,
+                        this.x, this.y + yOffset, 12 * sizeMultiplier
+                    );
+                    shimmerGrad.addColorStop(0, `rgba(255, 255, 255, ${0.4 * shimmerIntensity})`);
+                    shimmerGrad.addColorStop(0.5, `rgba(255, 255, 200, ${0.2 * shimmerIntensity})`);
+                    shimmerGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+                    ctx.fillStyle = shimmerGrad;
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        this.x,
+                        this.y + yOffset,
+                        12 * sizeMultiplier,
+                        9 * sizeMultiplier,
+                        0, 0, Math.PI * 2
+                    );
+                    ctx.fill();
+
+                    // Add sparkle particles occasionally
+                    if (Math.random() < 0.02) { // 2% chance per frame
+                        const sparkleAngle = Math.random() * Math.PI * 2;
+                        const sparkleDistance = 8 + Math.random() * 4;
+                        specialEffects.push({
+                            x: this.x + Math.cos(sparkleAngle) * sparkleDistance,
+                            y: this.y + yOffset + Math.sin(sparkleAngle) * sparkleDistance,
+                            type: 'rare-sparkle',
+                            timer: 0,
+                            duration: 500,
+                            size: 2 + Math.random() * 2
+                        });
+                    }
+
+                    ctx.restore();
+                }
+
                 // Draw the belly
               // MODIFY THIS LINE to use mushroom color:
     ctx.fillStyle = mushroomMode ? getMushroomColor(this.birdType.bellyColor) : this.birdType.bellyColor;
@@ -16370,6 +16563,59 @@ function drawSpecialEffects(deltaTime) {
                 }
                 ctx.restore();
                 break;
+
+            case 'rare-sparkle':
+                // Sparkle effect for rare birds
+                const sparkleProgress = effect.timer / effect.duration;
+                const sparkleOpacity = sparkleProgress < 0.5 ? sparkleProgress / 0.5 :
+                                      (1 - sparkleProgress) / 0.5;
+
+                ctx.save();
+                ctx.globalAlpha = sparkleOpacity;
+
+                // Draw a star-shaped sparkle
+                ctx.fillStyle = '#FFFFFF';
+                ctx.shadowColor = '#FFD700';
+                ctx.shadowBlur = 5;
+
+                // Main star point
+                ctx.beginPath();
+                ctx.arc(effect.x, effect.y, effect.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Four directional rays
+                const rayLength = effect.size * 2;
+                ctx.strokeStyle = '#FFFFFF';
+                ctx.lineWidth = 1;
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2 + Math.PI / 4;
+                    ctx.beginPath();
+                    ctx.moveTo(effect.x, effect.y);
+                    ctx.lineTo(
+                        effect.x + Math.cos(angle) * rayLength,
+                        effect.y + Math.sin(angle) * rayLength
+                    );
+                    ctx.stroke();
+                }
+
+                ctx.restore();
+                break;
+
+            case 'partner-feeding':
+                // Partner feeding effect - show love emoji
+                const partnerProgress = effect.timer / effect.duration;
+                const partnerOpacity = partnerProgress < 0.3 ? partnerProgress / 0.3 :
+                                      (partnerProgress > 0.7 ? (1 - partnerProgress) / 0.3 : 1);
+
+                ctx.save();
+                ctx.globalAlpha = partnerOpacity;
+
+                // Draw emoji floating up
+                const emojiY = effect.y - (partnerProgress * 20);
+                ctx.font = '16px Arial';
+                ctx.fillText(effect.emoji, effect.x - 8, emojiY);
+                ctx.restore();
+                break;
         }
     } // <-- This closes the for loop
 } // <-- Missing closing brace for the function
@@ -16616,9 +16862,28 @@ class Owl {
                         
                         // Check if we're close enough to the target
                         const dist = distance(this.x, this.y, this.target.x, this.target.y);
-                        if (dist < 30) {
-                            // Caught the target!
-                            if (this.target.type === 'rat' || this.target.type === 'ratKing') {
+                        const catchDistance = this.target.type === 'ratKing' ? 20 : 30; // Rat Kings are harder to catch
+                        if (dist < catchDistance) {
+                            // Rat Kings have a 40% chance to escape!
+                            if (this.target.type === 'ratKing' && Math.random() < 0.4) {
+                                // Rat King escapes! Force them to flee
+                                this.target.rat.state = 'fleeing';
+                                this.target.rat.stateTimer = 0;
+                                this.target.rat.direction = this.target.rat.x < this.x ? -1 : 1;
+                                // Apply emergency escape force
+                                this.target.rat.velocity.x = this.target.rat.direction * this.target.rat.speed * 3;
+                                debugLog(`Rat King escaped from owl's grasp!`);
+
+                                // Create sparkle effect for dramatic escape
+                                addSpecialEffect({
+                                    type: 'sparkle',
+                                    x: this.target.x,
+                                    y: this.target.y,
+                                    duration: 500,
+                                    intensity: 0.3
+                                });
+                            } else if (this.target.type === 'rat' || this.target.type === 'ratKing') {
+                                // Caught the target!
                                 const ratIndex = rats.indexOf(this.target.rat);
                                 if (ratIndex !== -1) {
                                     rats.splice(ratIndex, 1);
@@ -16642,9 +16907,10 @@ class Owl {
                                         duration: 1000,
                                         intensity: 0.5
                                     });
-                                    
+
                                     debugLog(`Owl caught ${this.target.type === 'ratKing' ? 'rat king' : 'rat'} at (${this.target.x}, ${this.target.y})`);
                                 }
+                            }
                             }
                         }
                     }
@@ -21149,6 +21415,7 @@ if (mushroomMode) {
     updateMushroomClusters(deltaTime);
     drawMushroomClusters();
     updateFoodCaches(deltaTime);
+    drawFoodCaches(); // Draw cached food with subtle markers
     drawFood(deltaTime);
     drawBirdPoops(deltaTime);
     drawWorms();
