@@ -3950,15 +3950,25 @@ debugLog(`Rain event completed. Total rains: ${rainsCompleted}`);
 // 10% chance on every rain after 10 rains, and only if no pond exists yet
 if (rainsCompleted >= 10 && ponds.length === 0 && Math.random() < 0.10) {
     const pondX = 100 + Math.random() * (canvas.width - 200);
-    const pondWidth = 100 + Math.random() * 60;
-    const pondHeight = 50 + Math.random() * 30;
+
+    // IMPROVED: More size variation (80-180 width range)
+    const sizeMultiplier = 0.8 + Math.random() * 1.0; // 0.8x to 1.8x
+    const pondWidth = (80 + Math.random() * 60) * sizeMultiplier;
+    const pondHeight = (40 + Math.random() * 30) * sizeMultiplier;
     const pondY = canvas.height * GROUND_HEIGHT_RATIO;
+
+    // IMPROVED: Random pond shapes
+    const shapes = ['round', 'oval', 'kidney', 'irregular'];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
     ponds.push({
         x: pondX,
         y: pondY,
         width: pondWidth,
         height: pondHeight,
+        depth: Math.random(), // Add depth for layering (0-1)
+        shape: shape, // Add shape variant
+        irregularPoints: 8, // Points for irregular shape
         rippleTimer: 0,
         ripples: []
     });
@@ -4315,14 +4325,42 @@ if (trees.length > 0 && Math.random() < 0.15) {
 
         // Draw ponds (permanent water features)
         function drawPonds() {
-            ponds.forEach(pond => {
+            // IMPROVED: Sort ponds by depth for proper layering (back to front)
+            const sortedPonds = [...ponds].sort((a, b) => (b.depth || 0.5) - (a.depth || 0.5));
+
+            sortedPonds.forEach(pond => {
                 // Draw pond with top edge at ground level (center below ground)
                 const drawY = pond.y + pond.height;
+
+                // IMPROVED: Different pond shapes for variety
+                const shape = pond.shape || 'round'; // Default to round for existing ponds
 
                 // Pond base - simplified solid colors for better performance
                 ctx.fillStyle = mushroomMode ? getMushroomColor('rgba(50, 110, 190, 0.85)') : 'rgba(50, 110, 190, 0.85)';
                 ctx.beginPath();
-                ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+
+                if (shape === 'round') {
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+                } else if (shape === 'oval') {
+                    // Stretched ellipse
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height * 0.6, 0, 0, Math.PI * 2);
+                } else if (shape === 'kidney') {
+                    // Kidney-shaped pond (two overlapping circles)
+                    ctx.arc(pond.x - pond.width * 0.2, drawY, pond.width * 0.7, 0, Math.PI * 2);
+                    ctx.arc(pond.x + pond.width * 0.2, drawY, pond.width * 0.7, 0, Math.PI * 2);
+                } else if (shape === 'irregular') {
+                    // Irregular blob shape
+                    const points = pond.irregularPoints || 8;
+                    for (let i = 0; i <= points; i++) {
+                        const angle = (i / points) * Math.PI * 2;
+                        const radius = pond.width * (0.7 + Math.sin(angle * 3) * 0.3);
+                        const px = pond.x + Math.cos(angle) * radius;
+                        const py = drawY + Math.sin(angle) * (pond.height * (0.7 + Math.cos(angle * 2) * 0.3));
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                }
                 ctx.fill();
 
                 // Reflections/highlights
@@ -4335,7 +4373,13 @@ if (trees.length > 0 && Math.random() < 0.15) {
                 // Apply clipping to keep ripples within pond boundaries
                 ctx.save();
                 ctx.beginPath();
-                ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+                if (shape === 'round' || shape === 'oval') {
+                    const heightRatio = shape === 'oval' ? 0.6 : 1.0;
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height * heightRatio, 0, 0, Math.PI * 2);
+                } else {
+                    // Use bounding ellipse for clipping irregular shapes
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+                }
                 ctx.clip();
 
                 const visibleRipples = pond.ripples.slice(0, 5);
@@ -13713,9 +13757,13 @@ class Bush {
     constructor(x, depth) {
         this.x = x;
         this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground, 1 = background)
-        this.scale = 1 - this.depth * 0.3; // Scale based on depth (0.7x to 1.0x)
-        this.width = (40 + Math.random() * 30) * this.scale; // Varied bush widths, scaled by depth
-        this.height = (30 + Math.random() * 20) * this.scale; // Varied heights, scaled by depth
+
+        // IMPROVED: Add random size variation - some bushes are bigger (up to 1.5x)
+        const randomSizeMultiplier = 0.8 + Math.random() * 0.7; // 0.8x to 1.5x
+        this.scale = (1 - this.depth * 0.3) * randomSizeMultiplier; // Depth scale (0.7x to 1.0x) * random size
+
+        this.width = (40 + Math.random() * 30) * this.scale; // Varied bush widths, scaled by depth and size
+        this.height = (30 + Math.random() * 20) * this.scale; // Varied heights, scaled by depth and size
 
         // Depth offset: foreground bushes go deeper into grass area for depth perception
         const depthOffset = this.depth < 0.3 ? (15 + Math.random() * 30) : (Math.random() * 15);
@@ -22873,16 +22921,26 @@ function drawFullScene() {
 
             // 10% chance to spawn a pond on initial load
             if (Math.random() < 0.1) {
-                const pondWidth = 80 + Math.random() * 40;
-                const pondHeight = 50 + Math.random() * 30;
                 const pondX = 100 + Math.random() * (canvas.width - 200);
                 const pondY = canvas.height * GROUND_HEIGHT_RATIO;
+
+                // IMPROVED: More size variation
+                const sizeMultiplier = 0.8 + Math.random() * 1.0; // 0.8x to 1.8x
+                const pondWidth = (80 + Math.random() * 50) * sizeMultiplier;
+                const pondHeight = (40 + Math.random() * 30) * sizeMultiplier;
+
+                // IMPROVED: Random pond shapes
+                const shapes = ['round', 'oval', 'kidney', 'irregular'];
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
                 ponds.push({
                     x: pondX,
                     y: pondY,
                     width: pondWidth,
                     height: pondHeight,
+                    depth: Math.random(), // Add depth for layering
+                    shape: shape, // Add shape variant
+                    irregularPoints: 8,
                     ripples: []
                 });
 
@@ -23597,11 +23655,18 @@ const spawnPondBtn = document.getElementById('spawnPondBtn');
 spawnPondBtn.addEventListener('click', () => {
     // Create pond at random location
     const x = 100 + Math.random() * (canvas.width - 200);
-    const width = 80 + Math.random() * 40;
-    const height = 40 + Math.random() * 20;
+
+    // IMPROVED: More size variation
+    const sizeMultiplier = 0.8 + Math.random() * 1.0; // 0.8x to 1.8x
+    const width = (80 + Math.random() * 50) * sizeMultiplier;
+    const height = (40 + Math.random() * 25) * sizeMultiplier;
 
     // Position pond so top edge aligns with ground (appears to be in the ground)
     const y = canvas.height * GROUND_HEIGHT_RATIO + height / 2;
+
+    // IMPROVED: Random pond shapes
+    const shapes = ['round', 'oval', 'kidney', 'irregular'];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
     if (!ponds) ponds = [];
 
@@ -23610,11 +23675,14 @@ spawnPondBtn.addEventListener('click', () => {
         y: y,
         width: width,
         height: height,
+        depth: Math.random(), // Add depth for layering
+        shape: shape, // Add shape variant
+        irregularPoints: 8,
         rippleTimer: 0,
         ripples: []
     });
 
-    debugLog(`Pond spawned at (${x}, ${y}), size: ${width}x${height}`);
+    debugLog(`Pond spawned at (${x}, ${y}), size: ${width}x${height}, shape: ${shape}`);
 });
 
 // Spawn a frog
