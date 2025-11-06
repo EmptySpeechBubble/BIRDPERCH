@@ -520,8 +520,24 @@
         <details class="detail-section">
             <summary>🌳 Trees & Environment</summary>
             <ul>
-                <li><strong>Tree lifecycle:</strong> Trees age, produce flowers, and eventually fall. New trees regrow</li>
-                <li><strong>Rare tall trees:</strong> 2% of trees spawn as majestic tall variants - 33% taller with thicker trunks and more branches for extra perching spots</li>
+                <li><strong>Tree lifecycle:</strong> Trees live for 6.5 in-game days (~26 min), age gracefully, produce flowers, and eventually fall. New trees regrow dynamically</li>
+                <li><strong>Dynamic spawning:</strong> Trees spawn faster when sparse (every 3 min), slower when dense (every 8 min). Full ecosystem takes 1-2 hours</li>
+                <li><strong>Spawn variety:</strong> Trees can spawn as singles (58%), pairs (25%), clusters (5%), or rare "Forest Bloom" events (2%) with 5-7 trees at once!</li>
+                <li><strong>Special tree types:</strong> 15% chance for rare variants (Birch, Cherry, Willow, Oak, Pine, Maple, Aspen) with unique colors. Time of day affects which types spawn!</li>
+                <li><strong>Rare tall trees:</strong> 2% spawn as majestic tall variants - 33% taller with thicker trunks and more branches for extra perching spots</li>
+                <li><strong>Special Starting Scenarios (10% chance):</strong>
+                    <ul>
+                        <li>🌳 <strong>Ancient Garden</strong> - One magnificent elder tree</li>
+                        <li>🌱 <strong>Baby Forest</strong> - 12-15 young saplings</li>
+                        <li>🌲 <strong>Twin Giants</strong> - Two ancient guardians</li>
+                        <li>✨ <strong>Sacred Grove</strong> - 6-8 trees in mystical circle</li>
+                        <li>🍎 <strong>Orchard</strong> - 7-9 trees in neat row</li>
+                        <li>🌲 <strong>Wild Wilderness</strong> - 15-19 dense trees</li>
+                        <li>🎋 <strong>Zen Garden</strong> - 3 perfect trees in balance</li>
+                        <li>🛤️ <strong>Enchanted Path</strong> - 8-11 trees forming avenue</li>
+                        <li>🌿 <strong>Cluster Chaos</strong> - 3 competing groves</li>
+                    </ul>
+                </li>
                 <li><strong>Perching positions:</strong> Each tree offers 25 perching spots throughout its canopy, including all through the leafy areas</li>
                 <li><strong>Perching preferences:</strong> Birds prefer shelter during rain/night, healthy trees during day</li>
                 <li><strong>Branch traversal:</strong> Squirrels can jump between nearby trees</li>
@@ -588,20 +604,23 @@
             <summary>📖 Garden Diary</summary>
             <ul>
                 <li><strong>Auto-Generated Story:</strong> Click the 📖 button in info panel to view your garden's history</li>
-                <li><strong>Event Chronicle:</strong> Major moments automatically recorded (births, nests, weather, visitors)</li>
+                <li><strong>Event Chronicle:</strong> Major moments automatically recorded (births, nests, weather, visitors, special scenarios)</li>
+                <li><strong>Special Scenario Tracking:</strong> If your garden starts with a special scenario, it's automatically recorded in the diary with full description</li>
                 <li><strong>Bird Lineages:</strong> Birds receive names and track family generations (Ruby → Ruby Jr. → Ruby III)</li>
                 <li><strong>Timeline View:</strong> See your garden's story unfold day by day</li>
                 <li><strong>Family Trees:</strong> Watch bird families grow across generations</li>
-                <li><strong>Milestone Tracking:</strong> First nest, pond formation, special events recorded</li>
+                <li><strong>Milestone Tracking:</strong> First nest, pond formation, rare birds, and special events recorded</li>
             </ul>
         </details>
 
         <details class="detail-section">
             <summary>🎮 Special Features & Easter Eggs</summary>
             <ul>
+                <li><strong>Special Starting Scenarios:</strong> 10% chance to start with a unique garden setup! A roguelite-style popup announces your scenario (Ancient Garden, Baby Forest, Twin Giants, etc). Auto-fades after 10 seconds or click to dismiss. Recorded in diary!</li>
                 <li><strong>Real-Time Clock & Forecast:</strong> Toggle in info panel for a large transparent 24-hour clock with weather forecast. Birds perch on numbers! Clock chimes hourly with different melodies.</li>
                 <li><strong>Gameboy:</strong> After day 30, an owl may deliver a magical gameboy. Click it to visit a 1-bit window game!</li>
                 <li><strong>Mushroom Mode:</strong> Psychedelic visual mode with rainbow colors and bird trails. Find the magic mushroom to unlock!</li>
+                <li><strong>Wind Chimes:</strong> 10% chance to spawn hanging from trees. Make soothing sounds when birds perch nearby. Owl delivers replacement if tree falls (after 15 days).</li>
                 <li><strong>Scarecrow:</strong> Birds avoid scarecrows. Stays for 1 day/night cycle</li>
                 <li><strong>Butterflies:</strong> Flutter peacefully through the garden near flowers</li>
                 <li><strong>Screenshots:</strong> Capture special moments with the 📷 button</li>
@@ -23237,9 +23256,10 @@ function drawFullScene() {
                     }
                 }
 
-                // Show popup for special scenario
+                // Show popup and add diary entry for special scenario
                 if (scenarioInfo) {
                     showSpecialScenarioPopup(scenarioInfo.icon, scenarioInfo.title, scenarioInfo.description);
+                    addDiaryEntry(`${scenarioInfo.icon} ${scenarioInfo.title}: ${scenarioInfo.description}`, 'special');
                 }
             }
 
