@@ -13834,16 +13834,15 @@ class Bush {
 
         // Fifth pass: Add small leaf clusters for bushy/leafy appearance
         // Cache leaf cluster positions on first draw
-        const leafClusterCount = 8 + Math.floor(this.leafDensity * 6); // 8-14 leaf clusters
+        const leafClusterCount = 6 + Math.floor(this.leafDensity * 4); // 6-10 leaf clusters
 
         if (this.cachedLeafClusters.length === 0) {
             for (let i = 0; i < leafClusterCount; i++) {
-                // Arrange in multiple rings for dense, bushy look
-                const ring = Math.floor(i / 4); // 4 clusters per ring
-                const angleInRing = (i % 4) * (Math.PI / 2) + Math.random() * 0.3;
-                const angle = angleInRing + ring * 0.4; // Offset each ring slightly
-                const dist = (0.4 + ring * 0.2) * this.width + Math.random() * 0.1 * this.width;
-                const radius = (4 + Math.random() * 3) * this.scale; // Slightly larger than highlights
+                // Distribute around the bush more tightly for integrated look
+                const angle = (i / leafClusterCount) * Math.PI * 2 + Math.random() * 0.5;
+                // Much closer distance - within the bush body
+                const dist = (0.1 + Math.random() * 0.15) * this.width;
+                const radius = (3 + Math.random() * 2) * this.scale; // Smaller clusters
                 this.cachedLeafClusters.push({ angle, dist, radius });
             }
         }
@@ -13861,7 +13860,7 @@ class Bush {
         for (let i = 0; i < this.cachedLeafClusters.length; i++) {
             const cluster = this.cachedLeafClusters[i];
             const clusterX = this.x + Math.cos(cluster.angle) * cluster.dist;
-            const clusterY = drawY + Math.sin(cluster.angle) * cluster.dist - this.height * 0.15;
+            const clusterY = drawY + Math.sin(cluster.angle) * cluster.dist - this.height * 0.1;
 
             ctx.beginPath();
             ctx.arc(clusterX, clusterY, cluster.radius, 0, Math.PI * 2);
