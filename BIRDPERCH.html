@@ -6244,7 +6244,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
         // Curtains Drawing Function
         function drawCurtains() {
-            if (!curtainsEnabled || !curtainColor) return;
+            // Only show curtains when window sill is also enabled
+            if (!curtainsEnabled || !windowSillEnabled || !curtainColor) return;
 
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to screen space
@@ -6254,8 +6255,18 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             const topThickness = 30;
             const bottomThickness = 60;
 
+            // Create clipping region for inside the frame only
+            ctx.beginPath();
+            ctx.rect(
+                sideThickness,
+                topThickness,
+                canvas.width - (sideThickness * 2),
+                canvas.height - topThickness - bottomThickness
+            );
+            ctx.clip();
+
             // Curtain positioned inside the frame
-            const curtainWidth = canvas.width * 0.12; // 12% of screen width (bunched up at sides)
+            const curtainWidth = canvas.width * 0.15; // 15% of screen width (bunched up at sides)
             const curtainTop = topThickness;
             const curtainBottom = canvas.height - bottomThickness;
             const curtainHeight = curtainBottom - curtainTop;
@@ -6265,10 +6276,25 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             // Function to draw one curtain panel with realistic pleats
             function drawCurtainPanel(isLeft) {
                 const panelX = isLeft ? sideThickness : canvas.width - sideThickness - curtainWidth;
-                const pleatCount = 6; // Number of vertical pleats
+                const pleatCount = 8; // Number of vertical pleats
                 const pleatWidth = curtainWidth / pleatCount;
 
-                // Draw pleated curtain
+                // First, draw sheer translucent fabric behind the pleats (fills the whole panel area)
+                ctx.fillStyle = `${curtainColor.main}20`; // Main color at 12% opacity (20 in hex)
+                ctx.fillRect(panelX, curtainTop, curtainWidth, curtainHeight);
+
+                // Add subtle pattern to sheer fabric
+                ctx.strokeStyle = `${curtainColor.main}10`;
+                ctx.lineWidth = 0.5;
+                for (let i = 0; i < 20; i++) {
+                    const y = curtainTop + (i * curtainHeight / 20);
+                    ctx.beginPath();
+                    ctx.moveTo(panelX, y);
+                    ctx.lineTo(panelX + curtainWidth, y);
+                    ctx.stroke();
+                }
+
+                // Now draw pleated fabric strips on top
                 for (let i = 0; i < pleatCount; i++) {
                     const x = panelX + (i * pleatWidth);
                     const isForwardFold = i % 2 === 0;
@@ -6297,11 +6323,11 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
                     ctx.fillStyle = pleatGradient;
 
-                    // Draw pleated fabric with gentle wave
+                    // Draw pleated fabric strip with gentle wave
                     ctx.beginPath();
                     ctx.moveTo(x, curtainTop);
 
-                    // Create wavy bottom edge with sway
+                    // Create wavy edge with sway
                     const segments = 20;
                     for (let j = 0; j <= segments; j++) {
                         const yProgress = j / segments;
@@ -6311,11 +6337,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         const wave = Math.sin(i * Math.PI + yProgress * Math.PI * 2) * (3 + yProgress * 2);
                         const sway = swayAmount * yProgress; // More sway at bottom
 
-                        if (j === 0) {
-                            ctx.lineTo(x + pleatWidth / 2 + wave + sway, yPos);
-                        } else {
-                            ctx.lineTo(x + pleatWidth / 2 + wave + sway, yPos);
-                        }
+                        const centerX = x + pleatWidth / 2;
+                        ctx.lineTo(centerX + wave + sway, yPos);
                     }
 
                     // Complete the pleat
@@ -6339,21 +6362,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     ctx.restore();
                 }
 
-                // Draw curtain rod holder at top
-                ctx.fillStyle = '#8B7355'; // Brass/bronze color
-                const rodHolderY = curtainTop - 5;
-                const rodHolderX = panelX + curtainWidth / 2;
-
-                // Small decorative rod holder
-                ctx.beginPath();
-                ctx.arc(rodHolderX, rodHolderY, 4, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Rod highlight
-                ctx.fillStyle = '#C9A961';
-                ctx.beginPath();
-                ctx.arc(rodHolderX - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
-                ctx.fill();
+                // Draw curtain rod holder at top (outside clipping region handled below)
             }
 
             // Draw left curtain panel (inside frame)
@@ -6361,6 +6370,36 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Draw right curtain panel (inside frame)
             drawCurtainPanel(false);
+
+            ctx.restore(); // Restore removes clipping
+
+            // Draw curtain rod holders AFTER clipping is removed (so they show on top of frame)
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+            const leftPanelX = sideThickness;
+            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.15);
+            const rodHolderY = topThickness + 5;
+
+            // Left rod holder
+            ctx.fillStyle = '#8B7355'; // Brass/bronze color
+            ctx.beginPath();
+            ctx.arc(leftPanelX + (canvas.width * 0.15) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#C9A961';
+            ctx.beginPath();
+            ctx.arc(leftPanelX + (canvas.width * 0.15) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Right rod holder
+            ctx.fillStyle = '#8B7355';
+            ctx.beginPath();
+            ctx.arc(rightPanelX + (canvas.width * 0.15) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#C9A961';
+            ctx.beginPath();
+            ctx.arc(rightPanelX + (canvas.width * 0.15) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.fill();
 
             ctx.restore();
         }
