@@ -11177,12 +11177,80 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                     this.stateTimer = 0;
                                     debugLog(`Bird is now an occupant of the birdhouse`);
                                 } else {
-                                    // Get more materials
-                                    this.findTwigs();
+                                    // Get more materials - search for twigs while staying focused on birdhouse
+                                    const twigsVisionRadius = getScaledVisionRadius(BIRD_VISION_RADIUS) * 2;
+                                    let foundTwig = false;
+
+                                    for (const twig of twigs) {
+                                        if (distance(this.x, this.y, twig.x, twig.y) < twigsVisionRadius) {
+                                            this.target = {
+                                                type: 'twig',
+                                                twig: twig,
+                                                x: twig.x,
+                                                y: twig.y
+                                            };
+                                            this.state = BIRD_STATES.COLLECTING;
+                                            this.stateTimer = 0;
+                                            foundTwig = true;
+                                            debugLog(`Bird found twig for birdhouse at (${twig.x}, ${twig.y})`);
+                                            break;
+                                        }
+                                    }
+
+                                    // If no twig found, fly to ground near trees to search (don't abandon birdhouse!)
+                                    if (!foundTwig) {
+                                        const groundY = canvas.height * GROUND_HEIGHT_RATIO - 10;
+                                        let targetX;
+                                        if (trees.length > 0) {
+                                            const sortedTrees = [...trees].sort((a, b) => b.health - a.health);
+                                            const tree = sortedTrees[0];
+                                            targetX = tree.x + (Math.random() - 0.5) * 50;
+                                        } else {
+                                            targetX = Math.random() * canvas.width;
+                                        }
+                                        this.generatePath(targetX, groundY);
+                                        this.state = BIRD_STATES.FLYING;
+                                        this.stateTimer = 0;
+                                        debugLog(`Bird searching for twigs to continue birdhouse at (${this.buildingBirdhouse.x})`);
+                                    }
                                 }
                             } else {
-                                // Get more materials
-                                this.findTwigs();
+                                // Get more materials - search for twigs while staying focused on birdhouse
+                                const twigsVisionRadius = getScaledVisionRadius(BIRD_VISION_RADIUS) * 2;
+                                let foundTwig = false;
+
+                                for (const twig of twigs) {
+                                    if (distance(this.x, this.y, twig.x, twig.y) < twigsVisionRadius) {
+                                        this.target = {
+                                            type: 'twig',
+                                            twig: twig,
+                                            x: twig.x,
+                                            y: twig.y
+                                        };
+                                        this.state = BIRD_STATES.COLLECTING;
+                                        this.stateTimer = 0;
+                                        foundTwig = true;
+                                        debugLog(`Bird found twig for birdhouse at (${twig.x}, ${twig.y})`);
+                                        break;
+                                    }
+                                }
+
+                                // If no twig found, fly to ground near trees to search (don't abandon birdhouse!)
+                                if (!foundTwig) {
+                                    const groundY = canvas.height * GROUND_HEIGHT_RATIO - 10;
+                                    let targetX;
+                                    if (trees.length > 0) {
+                                        const sortedTrees = [...trees].sort((a, b) => b.health - a.health);
+                                        const tree = sortedTrees[0];
+                                        targetX = tree.x + (Math.random() - 0.5) * 50;
+                                    } else {
+                                        targetX = Math.random() * canvas.width;
+                                    }
+                                    this.generatePath(targetX, groundY);
+                                    this.state = BIRD_STATES.FLYING;
+                                    this.stateTimer = 0;
+                                    debugLog(`Bird searching for twigs to continue birdhouse at (${this.buildingBirdhouse.x})`);
+                                }
                             }
                             
                         } else {
@@ -11205,8 +11273,8 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                 this.direction = dx > 0 ? 1 : -1;
                             }
                             
-                            // If building trip is taking too long, give up
-                            if (this.stateTimer > 10000) {
+                            // If building trip is taking too long, give up (use configured duration)
+                            if (this.stateTimer > BIRD_STATE_DURATION.BUILDING_BIRDHOUSE) {
                                 // Drop materials
                                 if (this.materialsHeld > 0) {
                                     twigs.push({
@@ -12091,8 +12159,29 @@ if (this.pathIndex >= this.path.length) {
                             if (this.stateTimer > Math.max(MIN_STATE_DURATION, BIRD_STATE_DURATION.FLYING)) {
                                 // Choose a new random activity
                                 const r = Math.random();
-                                
-                                if (this.hunger > HUNGER_CRITICAL_THRESHOLD - 50) {
+
+                                // PRIORITY: If bird has an assigned birdhouse, return to building it
+                                if (this.buildingBirdhouse && !this.buildingBirdhouse.isComplete && this.materialsHeld === 0) {
+                                    // Look for twigs to continue building birdhouse
+                                    const twigsVisionRadius = getScaledVisionRadius(BIRD_VISION_RADIUS) * 2;
+                                    let foundTwig = false;
+                                    for (const twig of twigs) {
+                                        if (distance(this.x, this.y, twig.x, twig.y) < twigsVisionRadius) {
+                                            this.target = { type: 'twig', twig: twig, x: twig.x, y: twig.y };
+                                            this.state = BIRD_STATES.COLLECTING;
+                                            this.stateTimer = 0;
+                                            foundTwig = true;
+                                            debugLog(`Bird searching for birdhouse materials found twig at (${twig.x})`);
+                                            break;
+                                        }
+                                    }
+                                    // If still no twig found after timeout, return to birdhouse to try again
+                                    if (!foundTwig && Math.random() < 0.5) {
+                                        this.state = BIRD_STATES.BUILDING_BIRDHOUSE;
+                                        this.stateTimer = 0;
+                                        debugLog(`Bird returning to birdhouse at (${this.buildingBirdhouse.x}) to search for materials again`);
+                                    }
+                                } else if (this.hunger > HUNGER_CRITICAL_THRESHOLD - 50) {
                                     // Always find food if hungry
                                     this.findFoodSource();
                                 } else if (!this.isWild && !this.myNest && r < 0.1) {
