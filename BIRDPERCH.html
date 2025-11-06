@@ -6635,13 +6635,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
                     // STAGE 3 (70-100%): ROOF BEING ADDED
                     if (completionRatio > 0.7) {
-                        // Draw partial roof
+                        // Draw partial roof - roof width should match body width
                         const roofCompletionRatio = (completionRatio - 0.7) / 0.3; // Scale to 0-1
                         ctx.fillStyle = '#654321'; // Dark brown roof
                         ctx.beginPath();
-                        ctx.moveTo(this.x - this.width/2 - 5, houseBottom - 4 - this.height); // FIXED
-                        ctx.lineTo(this.x + this.width/2 * roofCompletionRatio, houseBottom - 4 - this.height); // FIXED
-                        ctx.lineTo(this.x, houseBottom - 4 - this.height - this.roofHeight * roofCompletionRatio); // FIXED
+                        ctx.moveTo(this.x - this.width/2 - 5, houseBottom - 4 - this.height); // Left edge
+                        ctx.lineTo(this.x + this.width/2 + 5, houseBottom - 4 - this.height); // Right edge (full width)
+                        ctx.lineTo(this.x, houseBottom - 4 - this.height - this.roofHeight * roofCompletionRatio); // Peak (grows with completion)
                         ctx.closePath();
                         ctx.fill();
                     }
@@ -18091,9 +18091,9 @@ function drawRainbow() {
 function checkForScarecrow() {
     // Count completed birdhouses
     const completedBirdhouses = birdhouses.filter(bh => bh.isComplete).length;
-    
-    // New requirements: 1 birdhouse, seen 1 rainbow, and 10 flowers
-    if (completedBirdhouses >= 1 && rainbowsShown >= 1 && flowers.length >= 10 && !scarecrowCreated) {
+
+    // Requirements: 2 birdhouses (need 2 to place scarecrow between them), seen 1 rainbow, and 10 flowers
+    if (completedBirdhouses >= 2 && rainbowsShown >= 1 && flowers.length >= 10 && !scarecrowCreated) {
         createScarecrow();
     }
 }
