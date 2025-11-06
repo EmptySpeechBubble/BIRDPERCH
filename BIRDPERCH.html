@@ -10722,9 +10722,9 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                             const now = Date.now();
                             if (!this.pairBondPartner &&
                                 !this.isWild &&
-                                this.stateTimer > 20000 && // After 20s of perching
-                                now - this.lastCourtshipDisplay > 120000 && // 2min cooldown
-                                Math.random() < 0.005) { // 0.5% chance per frame when perched
+                                this.stateTimer > 10000 && // Reduced from 20s to 10s - easier to trigger
+                                now - this.lastCourtshipDisplay > 60000 && // Reduced from 2min to 1min cooldown
+                                Math.random() < 0.02) { // Increased from 0.5% to 2% - 4x more frequent!
 
                                 // Look for potential mate nearby
                                 const potentialMates = birds.filter(b =>
@@ -13042,8 +13042,15 @@ if (this.pathIndex >= this.path.length) {
 
             // V26: Enhanced bird drawing with outlined wings
             draw() {
+                // BIRDHOUSE FIX: Don't draw birds that are inside birdhouses
+                // They should be hidden from view when resting/sleeping inside
+                const insideBirdhouse = birdhouses.find(bh => bh.occupants.includes(this));
+                if (insideBirdhouse) {
+                    return; // Skip drawing - bird is inside the birdhouse
+                }
+
                 const sizeMultiplier = this.birdType.sizeMultiplier;
-                
+
                 // V40 FIX: Improved wing state detection for gliding visual
                 // Determine if wings should be actively flapping or gliding
                 const isActivelyFlapping =
