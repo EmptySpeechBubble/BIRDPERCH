@@ -525,7 +525,7 @@
                 <li><strong>Spawn variety:</strong> Trees can spawn as singles (58%), pairs (25%), clusters (5%), or rare "Forest Bloom" events (2%) with 5-7 trees at once!</li>
                 <li><strong>Special tree types:</strong> 15% chance for rare variants (Birch, Cherry, Willow, Oak, Pine, Maple, Aspen) with unique colors. Time of day affects which types spawn!</li>
                 <li><strong>Rare tall trees:</strong> 2% spawn as majestic tall variants - 33% taller with thicker trunks and more branches for extra perching spots</li>
-                <li><strong>Special Starting Scenarios (10% chance):</strong>
+                <li><strong>Special Starting Scenarios (5% chance - rare!):</strong>
                     <ul>
                         <li>🌳 <strong>Ancient Garden</strong> - One magnificent elder tree</li>
                         <li>🌱 <strong>Baby Forest</strong> - 12-15 young saplings</li>
@@ -536,6 +536,11 @@
                         <li>🎋 <strong>Zen Garden</strong> - 3 perfect trees in balance</li>
                         <li>🛤️ <strong>Enchanted Path</strong> - 8-11 trees forming avenue</li>
                         <li>🌿 <strong>Cluster Chaos</strong> - 3 competing groves</li>
+                        <li>🏔️ <strong>Mountain Peaks</strong> - Trees rising like mountains</li>
+                        <li>🪞 <strong>Mirror Grove</strong> - Perfect symmetrical reflection</li>
+                        <li>🏜️ <strong>Desert Oasis</strong> - Precious life in vast emptiness</li>
+                        <li>💨 <strong>Storm Survivors</strong> - Windswept trees bent by gale</li>
+                        <li>🏛️ <strong>Ancient Ruins</strong> - Temple pillars with new growth</li>
                     </ul>
                 </li>
                 <li><strong>Perching positions:</strong> Each tree offers 25 perching spots throughout its canopy, including all through the leafy areas</li>
@@ -616,7 +621,7 @@
         <details class="detail-section">
             <summary>🎮 Special Features & Easter Eggs</summary>
             <ul>
-                <li><strong>Special Starting Scenarios:</strong> 10% chance to start with a unique garden setup! A roguelite-style popup announces your scenario (Ancient Garden, Baby Forest, Twin Giants, etc). Auto-fades after 10 seconds or click to dismiss. Recorded in diary!</li>
+                <li><strong>Special Starting Scenarios:</strong> 5% chance (rare!) to start with a unique garden setup! A roguelite-style popup announces your scenario - 14 unique setups including Mountain Peaks, Mirror Grove, Desert Oasis, Ancient Ruins, and more! Auto-fades after 10 seconds or click to dismiss. Recorded in diary!</li>
                 <li><strong>Real-Time Clock & Forecast:</strong> Toggle in info panel for a large transparent 24-hour clock with weather forecast. Birds perch on numbers! Clock chimes hourly with different melodies.</li>
                 <li><strong>Gameboy:</strong> After day 30, an owl may deliver a magical gameboy. Click it to visit a 1-bit window game!</li>
                 <li><strong>Mushroom Mode:</strong> Psychedelic visual mode with rainbow colors and bird trails. Find the magic mushroom to unlock!</li>
@@ -23102,16 +23107,16 @@ function drawFullScene() {
         function startAnimation() {
             if (animationRunning) return;
 
-            // NEW: 10% chance for special initial garden scenarios!
+            // NEW: 5% chance for special initial garden scenarios (14 unique scenarios!)
             const specialScenarioRoll = Math.random();
             let useSpecialScenario = false;
             let scenarioInfo = null;
 
-            if (specialScenarioRoll < 0.10) { // 10% chance
+            if (specialScenarioRoll < 0.05) { // 5% chance (reduced for rarity)
                 useSpecialScenario = true;
                 const scenarioType = Math.random();
 
-                if (scenarioType < 0.11) {
+                if (scenarioType < 0.071) {
                     // "Ancient Garden" - Single massive ancient tree
                     scenarioInfo = {
                         icon: '🌳',
@@ -23124,7 +23129,7 @@ function drawFullScene() {
                     trees.push(tree);
                     tallTreeCount++;
 
-                } else if (scenarioType < 0.22) {
+                } else if (scenarioType < 0.143) {
                     // "Baby Forest" - Many small young trees
                     scenarioInfo = {
                         icon: '🌱',
@@ -23139,7 +23144,7 @@ function drawFullScene() {
                         trees.push(tree);
                     }
 
-                } else if (scenarioType < 0.33) {
+                } else if (scenarioType < 0.214) {
                     // "Twin Giants" - Two huge trees side by side
                     scenarioInfo = {
                         icon: '🌲',
@@ -23156,7 +23161,7 @@ function drawFullScene() {
                         tallTreeCount++;
                     }
 
-                } else if (scenarioType < 0.44) {
+                } else if (scenarioType < 0.286) {
                     // "Sacred Grove" - Circle of special trees
                     scenarioInfo = {
                         icon: '✨',
@@ -23175,7 +23180,7 @@ function drawFullScene() {
                         trees.push(tree);
                     }
 
-                } else if (scenarioType < 0.55) {
+                } else if (scenarioType < 0.357) {
                     // "Orchard" - Evenly spaced row of varied trees
                     scenarioInfo = {
                         icon: '🍎',
@@ -23190,7 +23195,7 @@ function drawFullScene() {
                         trees.push(tree);
                     }
 
-                } else if (scenarioType < 0.66) {
+                } else if (scenarioType < 0.429) {
                     // "Wilderness" - Dense random forest
                     scenarioInfo = {
                         icon: '🌲',
@@ -23205,7 +23210,7 @@ function drawFullScene() {
                         trees.push(tree);
                     }
 
-                } else if (scenarioType < 0.77) {
+                } else if (scenarioType < 0.5) {
                     // "Zen Garden" - Minimalist, few perfect trees
                     scenarioInfo = {
                         icon: '🎋',
@@ -23220,7 +23225,7 @@ function drawFullScene() {
                         trees.push(tree);
                     }
 
-                } else if (scenarioType < 0.88) {
+                } else if (scenarioType < 0.571) {
                     // "Enchanted Path" - Trees forming a natural avenue
                     scenarioInfo = {
                         icon: '🛤️',
@@ -23237,7 +23242,7 @@ function drawFullScene() {
                         trees.push(tree);
                     }
 
-                } else {
+                } else if (scenarioType < 0.643) {
                     // "Cluster Chaos" - Three distinct tree clusters
                     scenarioInfo = {
                         icon: '🌿',
@@ -23253,6 +23258,128 @@ function drawFullScene() {
                             tree.age = Math.random() * (TREE_LIFESPAN * 0.45);
                             trees.push(tree);
                         }
+                    }
+
+                } else if (scenarioType < 0.714) {
+                    // "Mountain Peaks" - Trees progressively taller toward center
+                    scenarioInfo = {
+                        icon: '🏔️',
+                        title: 'Mountain Peaks',
+                        description: 'Trees rise like mountain peaks, tallest at the summit'
+                    };
+                    const treeCount = 7 + Math.floor(Math.random() * 4);
+                    const centerX = canvas.width / 2;
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 120 + (i * (canvas.width - 240) / (treeCount - 1));
+                        // Calculate height based on distance from center (mountain shape)
+                        const distFromCenter = Math.abs(x - centerX) / (canvas.width / 2);
+                        const heightMultiplier = 1 - (distFromCenter * 0.7); // Center trees 30% taller
+                        const baseHeight = 100 + Math.random() * 40;
+                        const trunkHeight = baseHeight * (0.5 + heightMultiplier);
+                        const trunkWidth = 15 + (heightMultiplier * 15);
+                        const leafRadius = 35 + (heightMultiplier * 25);
+                        const tree = new Tree(x, trunkWidth, trunkHeight, leafRadius, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.4);
+                        trees.push(tree);
+                        if (heightMultiplier > 0.8) tallTreeCount++;
+                    }
+
+                } else if (scenarioType < 0.786) {
+                    // "Mirror Grove" - Perfect left-right symmetry
+                    scenarioInfo = {
+                        icon: '🪞',
+                        title: 'Mirror Grove',
+                        description: 'Nature creates a perfect reflection across the garden'
+                    };
+                    const pairsCount = 3 + Math.floor(Math.random() * 2); // 3-4 pairs
+                    const centerX = canvas.width / 2;
+                    for (let i = 0; i < pairsCount; i++) {
+                        const offset = 80 + (i * 120) + Math.random() * 40;
+                        const trunkWidth = 18 + Math.random() * 8;
+                        const trunkHeight = 120 + Math.random() * 60;
+                        const leafRadius = 45 + Math.random() * 20;
+                        const age = Math.random() * (TREE_LIFESPAN * 0.4);
+                        const isTall = trunkHeight > 150;
+
+                        // Left tree
+                        const leftTree = new Tree(centerX - offset, trunkWidth, trunkHeight, leafRadius, true);
+                        leftTree.age = age;
+                        trees.push(leftTree);
+                        if (isTall) tallTreeCount++;
+
+                        // Right tree (mirror)
+                        const rightTree = new Tree(centerX + offset, trunkWidth, trunkHeight, leafRadius, true);
+                        rightTree.age = age;
+                        trees.push(rightTree);
+                        if (isTall) tallTreeCount++;
+                    }
+
+                } else if (scenarioType < 0.857) {
+                    // "Desert Oasis" - Small cluster in center, vast emptiness
+                    scenarioInfo = {
+                        icon: '🏜️',
+                        title: 'Desert Oasis',
+                        description: 'A precious cluster of life in an endless expanse'
+                    };
+                    const treeCount = 2 + Math.floor(Math.random() * 2); // 2-3 trees only
+                    const centerX = canvas.width / 2;
+                    for (let i = 0; i < treeCount; i++) {
+                        const angle = (i / treeCount) * Math.PI * 2;
+                        const radius = 40 + Math.random() * 30; // Very tight cluster
+                        const x = centerX + Math.cos(angle) * radius;
+                        const tree = new Tree(x, 22 + Math.random() * 10, 150 + Math.random() * 70, 50 + Math.random() * 25, true);
+                        tree.age = TREE_LIFESPAN * (0.3 + Math.random() * 0.4);
+                        trees.push(tree);
+                        tallTreeCount++;
+                    }
+
+                } else if (scenarioType < 0.929) {
+                    // "Storm Survivors" - Trees all leaning in same direction
+                    scenarioInfo = {
+                        icon: '💨',
+                        title: 'Storm Survivors',
+                        description: 'Windswept trees bent by the relentless gale'
+                    };
+                    const treeCount = 6 + Math.floor(Math.random() * 4);
+                    const windDirection = Math.random() < 0.5 ? -1 : 1; // Left or right
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 100 + Math.random() * (canvas.width - 200);
+                        const tree = new Tree(x, 16 + Math.random() * 8, 110 + Math.random() * 50, 45 + Math.random() * 20, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.5);
+                        // Store wind direction for rendering (this would need custom render support)
+                        tree.windLean = windDirection;
+                        trees.push(tree);
+                    }
+
+                } else {
+                    // "Ancient Ruins" - 4 tall pillar trees in corners with scattered saplings
+                    scenarioInfo = {
+                        icon: '🏛️',
+                        title: 'Ancient Ruins',
+                        description: 'Pillars of an forgotten temple stand among new growth'
+                    };
+                    // Four corner pillars
+                    const margin = canvas.width * 0.15;
+                    const corners = [
+                        { x: margin, y: 0 },
+                        { x: canvas.width - margin, y: 0 },
+                        { x: margin + 50, y: 0 },
+                        { x: canvas.width - margin - 50, y: 0 }
+                    ];
+                    corners.forEach(corner => {
+                        const tree = new Tree(corner.x, 30 + Math.random() * 10, 200 + Math.random() * 60, 70 + Math.random() * 20, true);
+                        tree.age = TREE_LIFESPAN * 0.6;
+                        trees.push(tree);
+                        tallTreeCount++;
+                    });
+
+                    // Scattered young saplings (overgrown ruins)
+                    const saplingCount = 8 + Math.floor(Math.random() * 5);
+                    for (let i = 0; i < saplingCount; i++) {
+                        const x = 80 + Math.random() * (canvas.width - 160);
+                        const tree = new Tree(x, 8 + Math.random() * 5, 50 + Math.random() * 40, 25 + Math.random() * 15, Math.random() < 0.4);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.15);
+                        trees.push(tree);
                     }
                 }
 
@@ -23277,11 +23404,15 @@ function drawFullScene() {
             for (let c = 0; c < clusterCount; c++) {
                 // MOBILE FIX: Scale random spread based on screen width to prevent overlap
                 const spreadFactor = Math.max(0.5, canvas.width / 1920); // Scale spread with screen width
-                const randomSpread = 300 * spreadFactor; // Smaller spread on mobile
 
-                // More varied cluster positioning - spread out further
-                const clusterX = 100 + (c * (canvas.width - 200) / clusterCount) +
-                    (Math.random() - 0.5) * randomSpread; // MOBILE FIX: Scaled spread
+                // FIX LEFT-CLUSTERING: Better cluster distribution to prevent pile-ups on left
+                // Calculate base position with better spacing
+                const segmentWidth = (canvas.width - 300) / clusterCount; // Leave margins on both sides
+                const baseX = 150 + (c * segmentWidth) + (segmentWidth / 2); // Center of each segment
+
+                // Smaller random variation within the segment (prevents going off-screen)
+                const randomVariation = (Math.random() - 0.5) * Math.min(segmentWidth * 0.6, 150 * spreadFactor);
+                const clusterX = baseX + randomVariation;
 
                 // Random cluster variants: single big tree, small cluster, or large cluster
                 // MOBILE FIX: Reduce cluster sizes on smaller screens
