@@ -10387,13 +10387,15 @@ if (this.state === BIRD_STATES.FLYING) {
                                 break;
                             }
                         }
-                        
-// Check for shelter in birdhouses when raining or night
-if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to seek shelter
-        if (this.findBirdhouse()) {
-            break; // Skip other state transitions
-        }
+
+// IMPROVED: Check for shelter in birdhouses when raining or night
+// Higher chance at night (70%) vs rain (50%) to encourage more birdhouse usage
+const shelterChance = timeOfDay >= 1 ? 0.7 : (isRaining ? 0.5 : 0);
+if (shelterChance > 0 && Math.random() < shelterChance) {
+    if (this.findBirdhouse()) {
+        break; // Skip other state transitions
     }
+}
 
 
                         // Check for state transitions
@@ -10474,8 +10476,9 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                 );
                             }
 
-                            // FIXED: Increased chance to build birdhouse (15% chance - was 5%)
-                            if (!this.isWild && Math.random() < 0.15 && this.materialsHeld === 0) {
+                            // IMPROVED: Increased chance to build birdhouse (25% chance - was 15%)
+                            // Also check if we haven't reached the limit yet
+                            if (!this.isWild && Math.random() < 0.25 && this.materialsHeld === 0 && birdhouses.length < 3) {
                                 this.findOrCreateBirdhouse();
                             }
                         } else {
@@ -11576,7 +11579,13 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                         const myBirdhouse = birdhouses.find(bh => bh.occupants.includes(this));
                         if (myBirdhouse) {
                             // Bird is in a birdhouse - stay at birdhouse position (INSIDE the house)
-                            this.x = myBirdhouse.x + (Math.random() - 0.5) * 10; // Slight movement
+                            // FIXED: Only apply slight movement occasionally, not every frame!
+                            if (Math.random() < 0.01) { // Only 1% chance per frame for subtle movement
+                                this.x = myBirdhouse.x + (Math.random() - 0.5) * 8;
+                            } else {
+                                // Stay at birdhouse position
+                                this.x = myBirdhouse.x;
+                            }
                             this.y = myBirdhouse.y - myBirdhouse.poleHeight - 20; // FIXED: Inside house (was +10, now -20)
                             this.velocity = { x: 0, y: 0 };
                             this.acceleration = { x: 0, y: 0 };
@@ -11654,7 +11663,13 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                         const sleepingBirdhouse = birdhouses.find(bh => bh.occupants.includes(this));
                         if (sleepingBirdhouse) {
                             // Stay at birdhouse position while sleeping (INSIDE the house)
-                            this.x = sleepingBirdhouse.x + (Math.random() - 0.5) * 5;
+                            // FIXED: Only apply tiny movement occasionally for sleeping animation
+                            if (Math.random() < 0.005) { // Very rare subtle movement while sleeping
+                                this.x = sleepingBirdhouse.x + (Math.random() - 0.5) * 3;
+                            } else {
+                                // Stay completely still while sleeping
+                                this.x = sleepingBirdhouse.x;
+                            }
                             this.y = sleepingBirdhouse.y - sleepingBirdhouse.poleHeight - 20; // FIXED: Inside house (was +10, now -20)
                         }
 
