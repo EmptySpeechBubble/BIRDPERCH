@@ -6184,10 +6184,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             const darkWood = '#654321'; // Dark wood for shadows
             const lightWood = '#A0522D'; // Light wood for highlights
 
-            // Frame thickness
-            const sideThickness = 80;
-            const topThickness = 60;
-            const bottomThickness = 120; // Thicker bottom sill for birds to land on
+            // Frame thickness (reduced by half)
+            const sideThickness = 40;
+            const topThickness = 30;
+            const bottomThickness = 60; // Thicker bottom sill for birds to land on
 
             // Draw left side frame
             ctx.fillStyle = frameColor;
@@ -6249,78 +6249,118 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to screen space
 
-            const curtainWidth = canvas.width * 0.15; // 15% of screen width
-            const curtainHeight = canvas.height;
-            const foldCount = 8; // Number of vertical folds in the fabric
-            const swayAmount = Math.sin(curtainSwayOffset) * 5; // Gentle sway
+            // Frame dimensions (must match window sill)
+            const sideThickness = 40;
+            const topThickness = 30;
+            const bottomThickness = 60;
 
-            // Function to draw one curtain with folds
-            function drawSingleCurtain(x, isLeft) {
-                ctx.fillStyle = curtainColor.main;
+            // Curtain positioned inside the frame
+            const curtainWidth = canvas.width * 0.12; // 12% of screen width (bunched up at sides)
+            const curtainTop = topThickness;
+            const curtainBottom = canvas.height - bottomThickness;
+            const curtainHeight = curtainBottom - curtainTop;
 
-                // Draw the curtain with vertical folds
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
+            const swayAmount = Math.sin(curtainSwayOffset) * 3; // Gentle sway
 
-                for (let i = 0; i <= foldCount; i++) {
-                    const yPos = (i / foldCount) * curtainHeight;
-                    const foldOffset = Math.sin(i * Math.PI / 2) * 15;
-                    const swayInfluence = swayAmount * (i / foldCount); // More sway at bottom
-                    const xOffset = isLeft ? foldOffset + swayInfluence : -foldOffset + swayInfluence;
+            // Function to draw one curtain panel with realistic pleats
+            function drawCurtainPanel(isLeft) {
+                const panelX = isLeft ? sideThickness : canvas.width - sideThickness - curtainWidth;
+                const pleatCount = 6; // Number of vertical pleats
+                const pleatWidth = curtainWidth / pleatCount;
 
-                    if (i === 0) {
-                        ctx.lineTo(x + xOffset, yPos);
+                // Draw pleated curtain
+                for (let i = 0; i < pleatCount; i++) {
+                    const x = panelX + (i * pleatWidth);
+                    const isForwardFold = i % 2 === 0;
+
+                    ctx.save();
+
+                    // Create pleat with gradient
+                    const pleatGradient = ctx.createLinearGradient(
+                        x, 0,
+                        x + pleatWidth, 0
+                    );
+
+                    if (isForwardFold) {
+                        // Forward fold (lighter on left, darker on right)
+                        pleatGradient.addColorStop(0, curtainColor.highlight);
+                        pleatGradient.addColorStop(0.3, curtainColor.main);
+                        pleatGradient.addColorStop(0.7, curtainColor.main);
+                        pleatGradient.addColorStop(1, curtainColor.shadow);
                     } else {
-                        // Create curved folds
-                        const controlX = x + xOffset + (isLeft ? -10 : 10);
-                        const controlY = yPos - (curtainHeight / foldCount) / 2;
-                        ctx.quadraticCurveTo(controlX, controlY, x + xOffset, yPos);
+                        // Backward fold (darker on left, lighter on right)
+                        pleatGradient.addColorStop(0, curtainColor.shadow);
+                        pleatGradient.addColorStop(0.3, curtainColor.main);
+                        pleatGradient.addColorStop(0.7, curtainColor.main);
+                        pleatGradient.addColorStop(1, curtainColor.highlight);
                     }
-                }
 
-                // Complete the curtain shape
-                ctx.lineTo(isLeft ? 0 : canvas.width, curtainHeight);
-                ctx.lineTo(isLeft ? 0 : canvas.width, 0);
-                ctx.closePath();
-                ctx.fill();
+                    ctx.fillStyle = pleatGradient;
 
-                // Add shadows for depth
-                const shadowGradient = ctx.createLinearGradient(
-                    isLeft ? 0 : canvas.width - curtainWidth,
-                    0,
-                    isLeft ? curtainWidth : canvas.width,
-                    0
-                );
-                shadowGradient.addColorStop(0, curtainColor.shadow);
-                shadowGradient.addColorStop(0.3, curtainColor.main);
-                shadowGradient.addColorStop(0.7, curtainColor.main);
-                shadowGradient.addColorStop(1, curtainColor.highlight);
-
-                ctx.fillStyle = shadowGradient;
-                ctx.fill();
-
-                // Add fold highlights
-                for (let i = 0; i < foldCount; i++) {
-                    const yPos = (i / foldCount) * curtainHeight;
-                    const foldOffset = Math.sin(i * Math.PI / 2) * 15;
-                    const swayInfluence = swayAmount * (i / foldCount);
-
-                    ctx.strokeStyle = curtainColor.highlight;
-                    ctx.lineWidth = 2;
-                    ctx.globalAlpha = 0.3;
+                    // Draw pleated fabric with gentle wave
                     ctx.beginPath();
-                    ctx.moveTo(isLeft ? 0 : canvas.width, yPos);
-                    ctx.lineTo(x + (isLeft ? foldOffset : -foldOffset) + swayInfluence, yPos + 20);
-                    ctx.stroke();
+                    ctx.moveTo(x, curtainTop);
+
+                    // Create wavy bottom edge with sway
+                    const segments = 20;
+                    for (let j = 0; j <= segments; j++) {
+                        const yProgress = j / segments;
+                        const yPos = curtainTop + (curtainHeight * yProgress);
+
+                        // Gentle wave gets more pronounced toward bottom
+                        const wave = Math.sin(i * Math.PI + yProgress * Math.PI * 2) * (3 + yProgress * 2);
+                        const sway = swayAmount * yProgress; // More sway at bottom
+
+                        if (j === 0) {
+                            ctx.lineTo(x + pleatWidth / 2 + wave + sway, yPos);
+                        } else {
+                            ctx.lineTo(x + pleatWidth / 2 + wave + sway, yPos);
+                        }
+                    }
+
+                    // Complete the pleat
+                    ctx.lineTo(x + pleatWidth, curtainBottom);
+                    ctx.lineTo(x + pleatWidth, curtainTop);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    // Add subtle sheen to center of each pleat
+                    if (isForwardFold) {
+                        ctx.strokeStyle = curtainColor.highlight;
+                        ctx.lineWidth = 1;
+                        ctx.globalAlpha = 0.3;
+                        ctx.beginPath();
+                        ctx.moveTo(x + pleatWidth / 2, curtainTop);
+                        ctx.lineTo(x + pleatWidth / 2 + swayAmount * 0.5, curtainBottom);
+                        ctx.stroke();
+                        ctx.globalAlpha = 1;
+                    }
+
+                    ctx.restore();
                 }
-                ctx.globalAlpha = 1;
+
+                // Draw curtain rod holder at top
+                ctx.fillStyle = '#8B7355'; // Brass/bronze color
+                const rodHolderY = curtainTop - 5;
+                const rodHolderX = panelX + curtainWidth / 2;
+
+                // Small decorative rod holder
+                ctx.beginPath();
+                ctx.arc(rodHolderX, rodHolderY, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Rod highlight
+                ctx.fillStyle = '#C9A961';
+                ctx.beginPath();
+                ctx.arc(rodHolderX - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+                ctx.fill();
             }
 
-            // Draw left curtain
-            drawSingleCurtain(curtainWidth, true);
+            // Draw left curtain panel (inside frame)
+            drawCurtainPanel(true);
 
-            // Draw right curtain
-            drawSingleCurtain(canvas.width - curtainWidth, false);
+            // Draw right curtain panel (inside frame)
+            drawCurtainPanel(false);
 
             ctx.restore();
         }
