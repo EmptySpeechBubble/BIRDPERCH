@@ -406,6 +406,14 @@
                     <input type="checkbox" id="debugToggle" style="margin-right: 5px;">
                     🔧
                 </label>
+                <label style="cursor: pointer; user-select: none;" title="Show Window Sill Frame">
+                    <input type="checkbox" id="windowSillToggle" style="margin-right: 5px;">
+                    🪟
+                </label>
+                <label style="cursor: pointer; user-select: none;" title="Show Curtains">
+                    <input type="checkbox" id="curtainsToggle" style="margin-right: 5px;">
+                    🎀
+                </label>
             </div>
             <button id="screenshotBtn" class="screenshot-btn">📷 Take Screenshot</button>
             <button id="manualBtn" class="manual-btn">📖 Guide & Features</button>
@@ -2098,6 +2106,12 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         let lastHourChimed = -1; // Track last hour that played a melody
         let hourlyMelodyPlaylist = []; // Shuffled playlist of 24 melodies
         let melodyPlaylistIndex = 0; // Current position in playlist
+
+        // Window Sill and Curtains System
+        let windowSillEnabled = false;
+        let curtainsEnabled = false;
+        let curtainColor = null; // Will be randomized when toggled
+        let curtainSwayOffset = 0; // For animation
 
         // Garden Diary System
         let diaryEntries = []; // Array of {day: number, event: string, timestamp: number, type: string}
@@ -6157,6 +6171,158 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     lockedAnimalType = null;
                 }
             }
+        }
+
+        // Window Sill Drawing Function
+        function drawWindowSill() {
+            if (!windowSillEnabled) return;
+
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to screen space (no camera transform)
+
+            const frameColor = '#8B4513'; // Saddle brown
+            const darkWood = '#654321'; // Dark wood for shadows
+            const lightWood = '#A0522D'; // Light wood for highlights
+
+            // Frame thickness
+            const sideThickness = 80;
+            const topThickness = 60;
+            const bottomThickness = 120; // Thicker bottom sill for birds to land on
+
+            // Draw left side frame
+            ctx.fillStyle = frameColor;
+            ctx.fillRect(0, 0, sideThickness, canvas.height);
+            // Add wood grain effect (shadow on left, highlight on right)
+            const leftGradient = ctx.createLinearGradient(0, 0, sideThickness, 0);
+            leftGradient.addColorStop(0, darkWood);
+            leftGradient.addColorStop(0.3, frameColor);
+            leftGradient.addColorStop(0.7, frameColor);
+            leftGradient.addColorStop(1, lightWood);
+            ctx.fillStyle = leftGradient;
+            ctx.fillRect(0, 0, sideThickness, canvas.height);
+
+            // Draw right side frame
+            const rightGradient = ctx.createLinearGradient(canvas.width - sideThickness, 0, canvas.width, 0);
+            rightGradient.addColorStop(0, lightWood);
+            rightGradient.addColorStop(0.3, frameColor);
+            rightGradient.addColorStop(0.7, frameColor);
+            rightGradient.addColorStop(1, darkWood);
+            ctx.fillStyle = rightGradient;
+            ctx.fillRect(canvas.width - sideThickness, 0, sideThickness, canvas.height);
+
+            // Draw top frame
+            const topGradient = ctx.createLinearGradient(0, 0, 0, topThickness);
+            topGradient.addColorStop(0, darkWood);
+            topGradient.addColorStop(0.3, frameColor);
+            topGradient.addColorStop(1, lightWood);
+            ctx.fillStyle = topGradient;
+            ctx.fillRect(0, 0, canvas.width, topThickness);
+
+            // Draw bottom sill (thicker, with depth)
+            const bottomGradient = ctx.createLinearGradient(0, canvas.height - bottomThickness, 0, canvas.height);
+            bottomGradient.addColorStop(0, lightWood);
+            bottomGradient.addColorStop(0.2, frameColor);
+            bottomGradient.addColorStop(0.8, frameColor);
+            bottomGradient.addColorStop(1, darkWood);
+            ctx.fillStyle = bottomGradient;
+            ctx.fillRect(0, canvas.height - bottomThickness, canvas.width, bottomThickness);
+
+            // Add inner shadow to create depth
+            ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(sideThickness - 2, topThickness - 2,
+                          canvas.width - (sideThickness * 2) + 4,
+                          canvas.height - topThickness - bottomThickness + 4);
+
+            // Add highlight to outer edges
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(2, 2, canvas.width - 4, canvas.height - 4);
+
+            ctx.restore();
+        }
+
+        // Curtains Drawing Function
+        function drawCurtains() {
+            if (!curtainsEnabled || !curtainColor) return;
+
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to screen space
+
+            const curtainWidth = canvas.width * 0.15; // 15% of screen width
+            const curtainHeight = canvas.height;
+            const foldCount = 8; // Number of vertical folds in the fabric
+            const swayAmount = Math.sin(curtainSwayOffset) * 5; // Gentle sway
+
+            // Function to draw one curtain with folds
+            function drawSingleCurtain(x, isLeft) {
+                ctx.fillStyle = curtainColor.main;
+
+                // Draw the curtain with vertical folds
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+
+                for (let i = 0; i <= foldCount; i++) {
+                    const yPos = (i / foldCount) * curtainHeight;
+                    const foldOffset = Math.sin(i * Math.PI / 2) * 15;
+                    const swayInfluence = swayAmount * (i / foldCount); // More sway at bottom
+                    const xOffset = isLeft ? foldOffset + swayInfluence : -foldOffset + swayInfluence;
+
+                    if (i === 0) {
+                        ctx.lineTo(x + xOffset, yPos);
+                    } else {
+                        // Create curved folds
+                        const controlX = x + xOffset + (isLeft ? -10 : 10);
+                        const controlY = yPos - (curtainHeight / foldCount) / 2;
+                        ctx.quadraticCurveTo(controlX, controlY, x + xOffset, yPos);
+                    }
+                }
+
+                // Complete the curtain shape
+                ctx.lineTo(isLeft ? 0 : canvas.width, curtainHeight);
+                ctx.lineTo(isLeft ? 0 : canvas.width, 0);
+                ctx.closePath();
+                ctx.fill();
+
+                // Add shadows for depth
+                const shadowGradient = ctx.createLinearGradient(
+                    isLeft ? 0 : canvas.width - curtainWidth,
+                    0,
+                    isLeft ? curtainWidth : canvas.width,
+                    0
+                );
+                shadowGradient.addColorStop(0, curtainColor.shadow);
+                shadowGradient.addColorStop(0.3, curtainColor.main);
+                shadowGradient.addColorStop(0.7, curtainColor.main);
+                shadowGradient.addColorStop(1, curtainColor.highlight);
+
+                ctx.fillStyle = shadowGradient;
+                ctx.fill();
+
+                // Add fold highlights
+                for (let i = 0; i < foldCount; i++) {
+                    const yPos = (i / foldCount) * curtainHeight;
+                    const foldOffset = Math.sin(i * Math.PI / 2) * 15;
+                    const swayInfluence = swayAmount * (i / foldCount);
+
+                    ctx.strokeStyle = curtainColor.highlight;
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = 0.3;
+                    ctx.beginPath();
+                    ctx.moveTo(isLeft ? 0 : canvas.width, yPos);
+                    ctx.lineTo(x + (isLeft ? foldOffset : -foldOffset) + swayInfluence, yPos + 20);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1;
+            }
+
+            // Draw left curtain
+            drawSingleCurtain(curtainWidth, true);
+
+            // Draw right curtain
+            drawSingleCurtain(canvas.width - curtainWidth, false);
+
+            ctx.restore();
         }
 
         // V26: Enhanced Nest class with deterioration system
@@ -22471,6 +22637,16 @@ for (let i = owls.length - 1; i >= 0; i--) {
     // ===== BIRD INTERACTION UI LAYER (top) =====
     drawBirdInteractionUI();
 
+    // ===== WINDOW FRAME OVERLAY (topmost layer) =====
+    // Update curtain sway animation
+    if (curtainsEnabled) {
+        curtainSwayOffset += deltaTime * 0.0005; // Slow, gentle sway
+    }
+
+    // Draw window sill and curtains (on top of everything, no camera transform)
+    drawCurtains(); // Draw curtains first (behind sill)
+    drawWindowSill(); // Draw sill on top
+
     // ===== PERIODIC UPDATES =====
     // Do periodic spawning and checks
     if (simulationTime % TWIG_SPAWN_RATE < 16) {
@@ -23832,6 +24008,47 @@ function drawFullScene() {
                 window.clockNumberPositions = []; // Initialize array for bird perching
             }
             debugLog(`Clock display ${clockEnabled ? 'enabled' : 'disabled'}`);
+        });
+    }
+
+    // Window Sill toggle handler
+    const windowSillToggle = document.getElementById('windowSillToggle');
+    if (windowSillToggle) {
+        windowSillToggle.addEventListener('change', () => {
+            windowSillEnabled = windowSillToggle.checked;
+            debugLog(`Window sill ${windowSillEnabled ? 'enabled' : 'disabled'}`);
+        });
+    }
+
+    // Curtains toggle handler
+    const curtainsToggle = document.getElementById('curtainsToggle');
+    if (curtainsToggle) {
+        curtainsToggle.addEventListener('change', () => {
+            curtainsEnabled = curtainsToggle.checked;
+            if (curtainsEnabled) {
+                // Randomize curtain color scheme when toggled on
+                const colorSchemes = [
+                    // Warm tones
+                    { main: '#8B1538', shadow: '#5D0E26', highlight: '#A8456B', name: 'Burgundy' },
+                    { main: '#B8860B', shadow: '#8B6508', highlight: '#DAA520', name: 'Gold' },
+                    { main: '#D2691E', shadow: '#A0522D', highlight: '#E9967A', name: 'Terracotta' },
+                    { main: '#8B4513', shadow: '#654321', highlight: '#A0522D', name: 'Sienna' },
+                    // Cool tones
+                    { main: '#2C5F7E', shadow: '#1B3A4D', highlight: '#4682B4', name: 'Steel Blue' },
+                    { main: '#4A7C59', shadow: '#2F4F3B', highlight: '#6B9D7A', name: 'Sage Green' },
+                    { main: '#9370DB', shadow: '#6B4FA3', highlight: '#B19CD9', name: 'Purple' },
+                    { main: '#1E4D5C', shadow: '#0F2A33', highlight: '#2E6B7D', name: 'Teal' },
+                    // Neutrals
+                    { main: '#C8B88E', shadow: '#A09271', highlight: '#E6DCC8', name: 'Cream' },
+                    { main: '#B8A88A', shadow: '#8B7E66', highlight: '#D4C4A8', name: 'Tan' },
+                    { main: '#7C7C7C', shadow: '#5A5A5A', highlight: '#9E9E9E', name: 'Gray' },
+                    { main: '#8B7D6B', shadow: '#6B5D4F', highlight: '#A89B88', name: 'Taupe' }
+                ];
+                curtainColor = colorSchemes[Math.floor(Math.random() * colorSchemes.length)];
+                debugLog(`Curtains enabled with ${curtainColor.name} color scheme`);
+            } else {
+                debugLog('Curtains disabled');
+            }
         });
     }
 
