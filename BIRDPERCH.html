@@ -2113,6 +2113,15 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         let curtainColor = null; // Will be randomized when toggled
         let curtainSwayOffset = 0; // For animation
 
+        // Sill Perching Bird System
+        let sillPerchSpots = []; // Array of {x, y, occupied: bool, bird: Bird|null}
+        const SILL_PERCH_COUNT = 5; // Number of spots along the sill
+        const SILL_BIRD_SCALE = 3; // Birds are 3x larger on sill
+        const SILL_PERCH_CHANCE = 0.07; // 7% chance to choose sill
+        const SILL_PERCH_DURATION_MIN = 60000; // 1 minute minimum
+        const SILL_PERCH_DURATION_MAX = 180000; // 3 minutes maximum
+        const MAX_SILL_BIRDS = 3; // Maximum birds on sill at once
+
         // Garden Diary System
         let diaryEntries = []; // Array of {day: number, event: string, timestamp: number, type: string}
         let birdNames = []; // Pool of bird names
@@ -5156,6 +5165,9 @@ document.addEventListener('visibilitychange', function() {
                     // Keep grass at ground level with stored depth offset
                     grass.y = newGroundLevel + (grass.depthOffset || 0);
                 });
+                // Reinitialize window sill perch spots (positions change with window size)
+                initializeSillPerchSpots();
+
 // Update ant hill if it exists
 if (antHill) {
     antHill.x *= scaleX; // Scale X position based on canvas width change
@@ -6402,6 +6414,347 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.fill();
 
             ctx.restore();
+        }
+
+        // Sill Perching Bird System
+        function initializeSillPerchSpots() {
+            sillPerchSpots = [];
+            if (!windowSillEnabled) return;
+
+            const sideThickness = 40;
+            const bottomThickness = 60;
+            const sillY = canvas.height - bottomThickness + 15; // On top of sill
+            const usableWidth = canvas.width - (sideThickness * 2);
+            const spacing = usableWidth / (SILL_PERCH_COUNT + 1);
+
+            for (let i = 0; i < SILL_PERCH_COUNT; i++) {
+                sillPerchSpots.push({
+                    x: sideThickness + spacing * (i + 1),
+                    y: sillY,
+                    occupied: false,
+                    bird: null
+                });
+            }
+        }
+
+        function drawSillBirdFrontal(bird, x, y, scale) {
+            ctx.save();
+
+            const size = 12 * scale; // Base size scaled up
+            const bodyColor = bird.birdType.bodyColor;
+            const wingColor = bird.birdType.wingColor;
+
+            // Bird animation states
+            if (!bird.sillAnimation) {
+                bird.sillAnimation = {
+                    blinkTimer: 0,
+                    blinkDuration: 100,
+                    blinkInterval: 3000 + Math.random() * 2000,
+                    isBlinking: false,
+                    headTilt: 0,
+                    headTiltDirection: 1,
+                    bodyBob: 0,
+                    bodyBobSpeed: 0.001,
+                    beakOpen: 0,
+                    beakOpenTimer: 0,
+                    leftFootUp: false,
+                    rightFootUp: false,
+                    footShuffleTimer: 0,
+                    emoteTimer: 0,
+                    currentEmote: null,
+                    emoteY: 0
+                };
+            }
+
+            const anim = bird.sillAnimation;
+
+            // Body bob (gentle breathing)
+            const bobOffset = Math.sin(anim.bodyBob) * 2;
+
+            // Draw body (round, fluffy)
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            ctx.ellipse(x, y + bobOffset, size * 1.2, size * 1.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw wings on sides
+            ctx.fillStyle = wingColor;
+            // Left wing
+            ctx.beginPath();
+            ctx.ellipse(x - size * 0.9, y + bobOffset, size * 0.5, size * 0.8, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            // Right wing
+            ctx.beginPath();
+            ctx.ellipse(x + size * 0.9, y + bobOffset, size * 0.5, size * 0.8, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw tail feathers (bottom)
+            ctx.fillStyle = wingColor;
+            ctx.beginPath();
+            ctx.ellipse(x, y + size * 1.2 + bobOffset, size * 0.7, size * 0.4, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw feet
+            const footY = y + size * 1.3 + bobOffset;
+            ctx.strokeStyle = '#8B4513';
+            ctx.lineWidth = 2 * scale;
+
+            // Left foot (3 toes)
+            const leftFootY = anim.leftFootUp ? footY - 2 : footY;
+            for (let i = 0; i < 3; i++) {
+                const angle = (i - 1) * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(x - size * 0.4, leftFootY);
+                ctx.lineTo(x - size * 0.4 + Math.sin(angle) * 4 * scale, leftFootY + 6 * scale);
+                ctx.stroke();
+            }
+
+            // Right foot (3 toes)
+            const rightFootY = anim.rightFootUp ? footY - 2 : footY;
+            for (let i = 0; i < 3; i++) {
+                const angle = (i - 1) * 0.3;
+                ctx.beginPath();
+                ctx.moveTo(x + size * 0.4, rightFootY);
+                ctx.lineTo(x + size * 0.4 + Math.sin(angle) * 4 * scale, rightFootY + 6 * scale);
+                ctx.stroke();
+            }
+
+            // Draw head with tilt
+            ctx.save();
+            ctx.translate(x, y - size * 0.6 + bobOffset);
+            ctx.rotate(anim.headTilt);
+
+            // Head
+            ctx.fillStyle = bodyColor;
+            ctx.beginPath();
+            ctx.arc(0, 0, size * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eyes
+            const eyeY = -size * 0.2;
+            const eyeSpacing = size * 0.4;
+
+            // Left eye
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(-eyeSpacing, eyeY, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Right eye
+            ctx.beginPath();
+            ctx.arc(eyeSpacing, eyeY, size * 0.3, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (!anim.isBlinking) {
+                // Pupils
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing, eyeY, size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(eyeSpacing, eyeY, size * 0.15, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eye highlights
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing - size * 0.05, eyeY - size * 0.05, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(eyeSpacing - size * 0.05, eyeY - size * 0.05, size * 0.06, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // Blinking (closed eyes)
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(-eyeSpacing - size * 0.3, eyeY);
+                ctx.lineTo(-eyeSpacing + size * 0.3, eyeY);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(eyeSpacing - size * 0.3, eyeY);
+                ctx.lineTo(eyeSpacing + size * 0.3, eyeY);
+                ctx.stroke();
+            }
+
+            // Beak
+            ctx.fillStyle = '#FF8C00';
+            ctx.beginPath();
+            ctx.moveTo(0, size * 0.2);
+            ctx.lineTo(-size * 0.15, size * 0.4 + anim.beakOpen * 3);
+            ctx.lineTo(size * 0.15, size * 0.4 + anim.beakOpen * 3);
+            ctx.closePath();
+            ctx.fill();
+
+            // Upper beak
+            ctx.beginPath();
+            ctx.moveTo(0, size * 0.2);
+            ctx.lineTo(-size * 0.15, size * 0.4 - anim.beakOpen * 2);
+            ctx.lineTo(size * 0.15, size * 0.4 - anim.beakOpen * 2);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.restore();
+
+            // Draw emote if active
+            if (anim.currentEmote) {
+                ctx.font = `${24 * scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                const emoteY = y - size * 2 - anim.emoteY;
+
+                // Emote shadow
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                ctx.fillText(anim.currentEmote, x + 2, emoteY + 2);
+
+                // Emote
+                ctx.fillStyle = '#000000';
+                ctx.fillText(anim.currentEmote, x, emoteY);
+            }
+
+            ctx.restore();
+        }
+
+        function updateSillBirdAnimation(bird, deltaTime) {
+            if (!bird.sillAnimation) return;
+
+            const anim = bird.sillAnimation;
+
+            // Body bob
+            anim.bodyBob += deltaTime * anim.bodyBobSpeed;
+
+            // Blinking
+            anim.blinkTimer += deltaTime;
+            if (!anim.isBlinking && anim.blinkTimer > anim.blinkInterval) {
+                anim.isBlinking = true;
+                anim.blinkTimer = 0;
+            }
+            if (anim.isBlinking && anim.blinkTimer > anim.blinkDuration) {
+                anim.isBlinking = false;
+                anim.blinkTimer = 0;
+                anim.blinkInterval = 3000 + Math.random() * 2000;
+            }
+
+            // Head tilt (random occasional tilts)
+            if (Math.random() < 0.001) {
+                anim.headTiltDirection = Math.random() < 0.5 ? -1 : 1;
+            }
+            const targetTilt = anim.headTiltDirection * 0.15;
+            anim.headTilt += (targetTilt - anim.headTilt) * 0.05;
+
+            // Beak open/close (chirping)
+            anim.beakOpenTimer += deltaTime;
+            if (anim.beakOpenTimer > 5000 && Math.random() < 0.0005) {
+                anim.beakOpen = 1;
+                anim.beakOpenTimer = 0;
+                // Show music note
+                if (!anim.currentEmote) {
+                    anim.currentEmote = '♪';
+                    anim.emoteTimer = 0;
+                    anim.emoteY = 0;
+                }
+            }
+            if (anim.beakOpen > 0) {
+                anim.beakOpen -= 0.05;
+            }
+
+            // Foot shuffle
+            anim.footShuffleTimer += deltaTime;
+            if (anim.footShuffleTimer > 8000 && Math.random() < 0.0003) {
+                anim.leftFootUp = !anim.leftFootUp;
+                setTimeout(() => {
+                    anim.rightFootUp = !anim.rightFootUp;
+                    setTimeout(() => {
+                        anim.leftFootUp = false;
+                        anim.rightFootUp = false;
+                    }, 200);
+                }, 200);
+                anim.footShuffleTimer = 0;
+            }
+
+            // Emote float up and fade
+            if (anim.currentEmote) {
+                anim.emoteTimer += deltaTime;
+                anim.emoteY += deltaTime * 0.02;
+                if (anim.emoteTimer > 2000) {
+                    anim.currentEmote = null;
+                }
+            }
+
+            // Random emotes
+            if (!anim.currentEmote && Math.random() < 0.0002) {
+                const emotes = ['❓', '💤', '✨'];
+                anim.currentEmote = emotes[Math.floor(Math.random() * emotes.length)];
+                anim.emoteTimer = 0;
+                anim.emoteY = 0;
+            }
+        }
+
+        function updateAndDrawSillBirds(deltaTime) {
+            if (!windowSillEnabled) return;
+
+            for (const spot of sillPerchSpots) {
+                if (spot.occupied && spot.bird) {
+                    // Update animation
+                    updateSillBirdAnimation(spot.bird, deltaTime);
+
+                    // Check if bird should leave
+                    if (!spot.bird.sillPerchStartTime) {
+                        spot.bird.sillPerchStartTime = Date.now();
+                        spot.bird.sillPerchDuration = SILL_PERCH_DURATION_MIN +
+                            Math.random() * (SILL_PERCH_DURATION_MAX - SILL_PERCH_DURATION_MIN);
+                    }
+
+                    if (Date.now() - spot.bird.sillPerchStartTime > spot.bird.sillPerchDuration) {
+                        // Bird leaves sill
+                        spot.bird.isOnSill = false;
+                        spot.bird.sillPerchStartTime = null;
+                        spot.bird.sillAnimation = null;
+                        spot.bird.state = BIRD_STATES.FLYING;
+                        spot.bird.stateTimer = 0;
+                        spot.occupied = false;
+                        spot.bird = null;
+                        debugLog('Bird left window sill');
+                    } else {
+                        // Draw the bird
+                        drawSillBirdFrontal(spot.bird, spot.x, spot.y, SILL_BIRD_SCALE);
+                    }
+                }
+            }
+        }
+
+        function handleSillBirdClick(x, y) {
+            if (!windowSillEnabled) return false;
+
+            for (const spot of sillPerchSpots) {
+                if (spot.occupied && spot.bird) {
+                    const birdX = spot.x;
+                    const birdY = spot.y;
+                    const size = 12 * SILL_BIRD_SCALE;
+                    const dist = Math.sqrt((x - birdX) ** 2 + (y - birdY) ** 2);
+
+                    if (dist < size * 1.5) {
+                        // Clicked on sill bird!
+                        const anim = spot.bird.sillAnimation;
+                        if (anim) {
+                            // Show hearts
+                            anim.currentEmote = '💕';
+                            anim.emoteTimer = 0;
+                            anim.emoteY = 0;
+
+                            // Open beak (chirp)
+                            anim.beakOpen = 1;
+
+                            // Play chirp sound
+                            playChirpSound();
+
+                            debugLog('Clicked sill bird - hearts!');
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
         // V26: Enhanced Nest class with deterioration system
@@ -9356,6 +9709,32 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                             isClock: true // mark as clock perch
                         });
                     });
+                }
+
+                // SILL PERCHING: Birds have a chance to choose window sill instead of trees
+                if (windowSillEnabled && sillPerchSpots.length > 0 &&
+                    Math.random() < SILL_PERCH_CHANCE) {
+                    // Find available sill spot
+                    const availableSpots = sillPerchSpots.filter(spot => !spot.occupied);
+                    const sillBirdCount = sillPerchSpots.filter(spot => spot.occupied).length;
+
+                    if (availableSpots.length > 0 && sillBirdCount < MAX_SILL_BIRDS) {
+                        // Choose random available spot
+                        const chosenSpot = availableSpots[Math.floor(Math.random() * availableSpots.length)];
+                        chosenSpot.occupied = true;
+                        chosenSpot.bird = this;
+
+                        // Set bird to sill mode
+                        this.isOnSill = true;
+                        this.state = BIRD_STATES.PERCHED;
+                        this.stateTimer = 0;
+
+                        // Fly to sill spot
+                        this.generatePath(chosenSpot.x, chosenSpot.y);
+
+                        debugLog(`Bird chose to perch on window sill at (${chosenSpot.x})`);
+                        return; // Skip normal perch selection
+                    }
                 }
 
                 // Safety check - if no perch positions, fly
@@ -22725,6 +23104,7 @@ for (let i = owls.length - 1; i >= 0; i--) {
     // Draw window sill and curtains (on top of everything, no camera transform)
     drawCurtains(); // Draw curtains first (behind sill)
     drawWindowSill(); // Draw sill on top
+    updateAndDrawSillBirds(deltaTime); // Draw sill-perching birds (on top of sill)
 
     // ===== PERIODIC UPDATES =====
     // Do periodic spawning and checks
@@ -23986,7 +24366,10 @@ function drawFullScene() {
 
             // Schedule first rain
             scheduleRain();
-            
+
+            // Initialize sill perch spots (if window sill is enabled)
+            initializeSillPerchSpots();
+
             // Start animation loop
             lastTime = Date.now();
             animationRunning = true;
@@ -25097,6 +25480,11 @@ canvas.addEventListener('click', (e) => {
             clickCount = 0;
             return; // Skip food scattering
         }
+    }
+
+    // Check if clicked on a sill bird (early check to give them priority)
+    if (handleSillBirdClick(scaledX, scaledY)) {
+        return; // Clicked a sill bird, don't scatter food
     }
 
 // Check if gameboy was clicked
