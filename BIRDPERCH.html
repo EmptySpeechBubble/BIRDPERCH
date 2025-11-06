@@ -11773,21 +11773,59 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                             }
                         }
 
-                        if (!nearestWater || minDist > 50) {
-                            // No water nearby, find one
-                            this.findPuddle();
-                            break;
+                        // BATHING FIX: Follow path like FLYING state does (no constant regeneration!)
+                        if (this.path && this.path.length > 0 && this.pathIndex < this.path.length) {
+                            const waypoint = this.path[this.pathIndex];
+                            const waypointDist = distance(this.x, this.y, waypoint.x, waypoint.y);
+                            const responsiveScale = getResponsiveScale();
+                            const reachThreshold = 20 * responsiveScale;
+
+                            if (waypointDist < reachThreshold) {
+                                // Reached waypoint, move to next
+                                this.pathIndex++;
+                                debugLog(`Bird reached waypoint ${this.pathIndex - 1} of ${this.path.length}, moving to next`);
+
+                                // If reached final waypoint, clear path
+                                if (this.pathIndex >= this.path.length) {
+                                    this.path = [];
+                                    this.pathIndex = 0;
+                                }
+                            } else {
+                                // Move toward waypoint
+                                const dx = waypoint.x - this.x;
+                                const dy = waypoint.y - this.y;
+                                const dir = normalize(dx, dy);
+
+                                // Adjust speed based on distance
+                                const responsiveThreshold = 30 * responsiveScale;
+                                const speedFactor = waypointDist < responsiveThreshold ?
+                                    0.3 + waypointDist / responsiveThreshold * 0.7 : 1.0;
+
+                                this.applyForce({
+                                    x: dir.x * 0.01 * speedFactor,
+                                    y: dir.y * 0.005 * speedFactor
+                                });
+
+                                // Face the direction of movement
+                                if (Math.abs(dx) > 2) {
+                                    this.direction = dx > 0 ? 1 : -1;
+                                }
+                            }
                         }
 
-                        // If already at water source
+                        // Check if we've reached the water
                         const bathingRadius = waterType === 'pond' ? 25 : 15; // Larger radius for ponds
-                        if (minDist < bathingRadius) {
+                        if (nearestWater && minDist < bathingRadius) {
                             // IMPROVED: Log when bird starts bathing (only once)
                             if (!this.bathingStarted) {
                                 this.bathingStarted = true;
                                 this.lastBathedTime = Date.now(); // Update cooldown timer
                                 debugLog(`Bird bathing in ${waterType} at (${nearestWater.x.toFixed(0)}, ${nearestWater.y.toFixed(0)})`);
                             }
+
+                            // Clear path - we're at destination
+                            this.path = [];
+                            this.pathIndex = 0;
 
                             // Bathing behavior - animated fluttering
                             this.velocity.x *= 0.5;
@@ -11825,34 +11863,21 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 this.bathingStarted = false; // Reset for next time
                                 debugLog(`Bird finished bathing, now preening`);
                             }
-                        } else {
-                            // FIX: Move toward water source (puddle or pond)
-                            const dx = nearestWater.x - this.x;
-                            const dy = nearestWater.y - this.y;
-                            const dir = normalize(dx, dy);
-
-                            this.applyForce({
-                                x: dir.x * 0.01,
-                                y: dir.y * 0.01
-                            });
-
-                            // Face direction of movement
-                            if (Math.abs(dx) > 2) {
-                                this.direction = dx > 0 ? 1 : -1;
-                            }
-
-                            // If taking too long to reach water, give up
-                            if (this.stateTimer > 5000) {
-                                this.state = BIRD_STATES.FLYING;
-                                this.stateTimer = 0;
-                                
-                                // Fly somewhere else
-                                this.generatePath(
-                                    Math.random() * canvas.width,
-                                    100 + Math.random() * (canvas.height * 0.3)
-                                );
-                            }
+                        } else if (!nearestWater || !this.path || this.path.length === 0) {
+                            // No water nearby or no path - find one (only regenerate if needed!)
+                            this.findPuddle();
+                        } else if (this.stateTimer > 10000) {
+                            // Taking too long, give up
+                            this.state = BIRD_STATES.FLYING;
+                            this.stateTimer = 0;
+                            this.path = [];
+                            this.pathIndex = 0;
+                            this.generatePath(
+                                Math.random() * canvas.width,
+                                100 + Math.random() * (canvas.height * 0.3)
+                            );
                         }
+
                         break;
                     }
 
