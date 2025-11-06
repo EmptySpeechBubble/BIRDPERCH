@@ -16773,9 +16773,9 @@ class Owl {
                 
                 // Move toward target
                 if (this.target) {
-                    const dx = this.target.x - this.x;
-                    const dy = this.target.y - this.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    dx = this.target.x - this.x;
+                    dy = this.target.y - this.y;
+                    dist = Math.sqrt(dx * dx + dy * dy);
                     
                     if (dist < 80) {
                         // Close enough to swoop down
@@ -16843,9 +16843,9 @@ class Owl {
                     // At the lowest point, check if we caught the target
                     if (swoopProgress >= 0.49 && swoopProgress <= 0.51 && !this.hasKilled) {
                         this.hasKilled = true;
-                        
+
                         // Check if we're close enough to the target
-                        const dist = distance(this.x, this.y, this.target.x, this.target.y);
+                        dist = distance(this.x, this.y, this.target.x, this.target.y);
                         const catchDistance = this.target.type === 'ratKing' ? 20 : 30; // Rat Kings are harder to catch
                         if (dist < catchDistance) {
                             // Rat Kings have a 40% chance to escape!
@@ -16894,7 +16894,6 @@ class Owl {
 
                                     debugLog(`Owl caught ${this.target.type === 'ratKing' ? 'rat king' : 'rat'} at (${this.target.x}, ${this.target.y})`);
                                 }
-                            }
                             }
                         }
                     }
