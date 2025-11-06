@@ -22926,16 +22926,104 @@ function drawFullScene() {
         // Start animation
         function startAnimation() {
             if (animationRunning) return;
-            
-            // IMPROVED: Create initial trees with better clustering and responsive count
-            // Scale tree count based on screen width (more trees on wider screens)
-            const baseTreeCount = 5 + Math.floor(Math.random() * 3);
-            const widthFactor = canvas.width / 1920; // 1920px baseline, NO Math.max to allow mobile reduction
-            const initialTreeCount = Math.max(3, Math.floor(baseTreeCount * widthFactor)); // At least 3 trees
 
-            // Create tree clusters for more natural distribution with MORE VARIETY
-            const clusterCount = Math.floor(initialTreeCount / 2.5); // 2-3 trees per cluster
-            const clusters = [];
+            // NEW: 10% chance for special initial garden scenarios!
+            const specialScenarioRoll = Math.random();
+            let useSpecialScenario = false;
+
+            if (specialScenarioRoll < 0.10) { // 10% chance
+                useSpecialScenario = true;
+                const scenarioType = Math.random();
+
+                if (scenarioType < 0.20) {
+                    // "Ancient Garden" - Single massive ancient tree
+                    debugLog('🌳 SPECIAL START: Ancient Garden - One magnificent ancient tree!');
+                    const x = canvas.width / 2;
+                    const tree = new Tree(x, 40, 250 + Math.random() * 100, 90, true);
+                    tree.age = TREE_LIFESPAN * 0.7; // Old tree
+                    trees.push(tree);
+                    tallTreeCount++;
+
+                } else if (scenarioType < 0.40) {
+                    // "Baby Forest" - Many small young trees
+                    debugLog('🌱 SPECIAL START: Baby Forest - A nursery of young saplings!');
+                    const treeCount = 12 + Math.floor(Math.random() * 4); // 12-15 trees
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 100 + Math.random() * (canvas.width - 200);
+                        const tree = new Tree(
+                            x,
+                            10 + Math.random() * 5, // Small trunks
+                            60 + Math.random() * 40, // Short trees
+                            30 + Math.random() * 15, // Small canopies
+                            Math.random() < 0.3 // Few branches
+                        );
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.1); // Very young
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.60) {
+                    // "Twin Giants" - Two huge trees side by side
+                    debugLog('🌲🌲 SPECIAL START: Twin Giants - Two majestic trees stand together!');
+                    const centerX = canvas.width / 2;
+                    const spacing = 150;
+                    for (let i = 0; i < 2; i++) {
+                        const x = centerX + (i === 0 ? -spacing : spacing);
+                        const tree = new Tree(x, 35 + Math.random() * 10, 220 + Math.random() * 80, 80, true);
+                        tree.age = TREE_LIFESPAN * 0.5;
+                        trees.push(tree);
+                        tallTreeCount++;
+                    }
+
+                } else if (scenarioType < 0.80) {
+                    // "Sacred Grove" - Circle of special trees
+                    debugLog('✨ SPECIAL START: Sacred Grove - A mystical circle of trees!');
+                    const treeCount = 6 + Math.floor(Math.random() * 3); // 6-8 trees
+                    const centerX = canvas.width / 2;
+                    const radius = Math.min(300, canvas.width * 0.25);
+                    for (let i = 0; i < treeCount; i++) {
+                        const angle = (i / treeCount) * Math.PI * 2;
+                        const x = centerX + Math.cos(angle) * radius;
+                        const clampedX = Math.max(100, Math.min(canvas.width - 100, x));
+                        const tree = new Tree(
+                            clampedX,
+                            18 + Math.random() * 8,
+                            140 + Math.random() * 60,
+                            50 + Math.random() * 20,
+                            true
+                        );
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.4);
+                        trees.push(tree);
+                    }
+
+                } else {
+                    // "Orchard" - Evenly spaced row of varied trees
+                    debugLog('🍎 SPECIAL START: Orchard - A neat row of diverse trees!');
+                    const treeCount = 7 + Math.floor(Math.random() * 3); // 7-9 trees
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 100 + (i * (canvas.width - 200) / (treeCount - 1));
+                        const tree = new Tree(
+                            x,
+                            16 + Math.random() * 6,
+                            110 + Math.random() * 50,
+                            45 + Math.random() * 15,
+                            true
+                        );
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.35);
+                        trees.push(tree);
+                    }
+                }
+            }
+
+            // NORMAL START: Create initial trees with better clustering and responsive count
+            if (!useSpecialScenario) {
+                // Scale tree count based on screen width (more trees on wider screens)
+                const baseTreeCount = 5 + Math.floor(Math.random() * 3);
+                const widthFactor = canvas.width / 1920; // 1920px baseline, NO Math.max to allow mobile reduction
+                const initialTreeCount = Math.max(3, Math.floor(baseTreeCount * widthFactor)); // At least 3 trees
+
+                // Create tree clusters for more natural distribution with MORE VARIETY
+                const clusterCount = Math.floor(initialTreeCount / 2.5); // 2-3 trees per cluster
+                const clusters = [];
 
             for (let c = 0; c < clusterCount; c++) {
                 // MOBILE FIX: Scale random spread based on screen width to prevent overlap
@@ -23013,6 +23101,7 @@ function drawFullScene() {
                     ));
                 }
             }
+            } // End if (!useSpecialScenario)
 
             // Add initial bushes with depth variation (distributed across entire grass area depth)
             const bushCount = 5 + Math.floor(Math.random() * 4); // 5-8 bushes for better coverage
