@@ -8700,7 +8700,7 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
             }
 
             // V26: Improved path generation for smoother, more natural movement
-            generatePath(targetX, targetY) {
+            generatePath(targetX, targetY, isWaterTarget = false) {
                 // Clear existing path
                 this.path = [];
                 this.pathIndex = 0;
@@ -8714,16 +8714,20 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 targetX = Math.max(marginX, Math.min(canvas.width - marginX, targetX));
                 // CRITICAL FIX: Allow birds to reach ground level (remove the -50 offset that was preventing ground landing)
                 targetY = Math.max(marginY, Math.min(canvas.height * GROUND_HEIGHT_RATIO + 60, targetY));
-                
-                // Check for problematic target locations with larger buffer
-                const isTargetInProblemArea = problemAreas.some(area => 
-                    Math.abs(targetX - area.x) < (area.radius + 20) // Added 20px buffer
-                );
-                
-                // If target is in problem area, adjust it more aggressively
-                if (isTargetInProblemArea) {
-                    debugLog(`Adjusting target away from problem area`);
-                    targetX = findSafeX(problemAreas);
+
+                // BATHING FIX: Skip problem area adjustment for water sources (puddles/ponds)
+                // Birds need to reach water even if it's near trees
+                if (!isWaterTarget) {
+                    // Check for problematic target locations with larger buffer
+                    const isTargetInProblemArea = problemAreas.some(area =>
+                        Math.abs(targetX - area.x) < (area.radius + 20) // Added 20px buffer
+                    );
+
+                    // If target is in problem area, adjust it more aggressively
+                    if (isTargetInProblemArea) {
+                        debugLog(`Adjusting target away from problem area`);
+                        targetX = findSafeX(problemAreas);
+                    }
                 }
                 
                 // Special handling for birds starting off-screen
@@ -9735,8 +9739,9 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 }
 
                 if (closestWater) {
-                    // Go to water source
-                    this.generatePath(closestWater.x, closestWater.y);
+                    // Go to water source - pass true to indicate this is a water target
+                    // BATHING FIX: This prevents path from being redirected away from water
+                    this.generatePath(closestWater.x, closestWater.y, true);
                     this.state = BIRD_STATES.BATHING;
                     this.stateTimer = 0;
                     this.drinkingFromPond = isPond; // Track if at pond
