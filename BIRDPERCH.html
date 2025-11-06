@@ -13734,11 +13734,26 @@ class Bush {
             return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
         };
 
-        const darkShade = darkenColor(this.color, 40);
-        const lightShade = lightenColor(this.color, 30);
-        const outlineColor = darkenColor(this.color, 60);
+        const darkShade = darkenColor(this.color, 50);
+        const lightShade = lightenColor(this.color, 40);
+        const outlineColor = darkenColor(this.color, 70);
 
-        // Draw each circle with shading for depth
+        // First pass: Draw background darker shadow circles (flat color)
+        ctx.fillStyle = darkShade;
+        for (let i = 0; i < circleCount; i++) {
+            const offsetX = (i - circleCount / 2) * (this.width / circleCount);
+            const offsetY = Math.sin(i) * (this.height * 0.2);
+            const radius = this.width / (circleCount * 0.8);
+            const centerX = this.x + offsetX + 2; // Slight offset for shadow
+            const centerY = drawY + offsetY + 2;
+
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius * 0.9, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Second pass: Draw main bush circles (base color, flat)
+        ctx.fillStyle = this.color;
         for (let i = 0; i < circleCount; i++) {
             const offsetX = (i - circleCount / 2) * (this.width / circleCount);
             const offsetY = Math.sin(i) * (this.height * 0.2);
@@ -13746,42 +13761,50 @@ class Bush {
             const centerX = this.x + offsetX;
             const centerY = drawY + offsetY;
 
-            // Create radial gradient for depth (darker at edges, lighter in center)
-            const gradient = ctx.createRadialGradient(
-                centerX - radius * 0.2, centerY - radius * 0.2, radius * 0.1,
-                centerX, centerY, radius
-            );
-            gradient.addColorStop(0, lightShade);
-            gradient.addColorStop(0.5, this.color);
-            gradient.addColorStop(1, darkShade);
-
-            // Draw filled circle with gradient
-            ctx.fillStyle = gradient;
             ctx.beginPath();
             ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
             ctx.fill();
 
-            // Add outline for definition
+            // Add thick outline for definition
             ctx.strokeStyle = outlineColor;
-            ctx.lineWidth = 1.5 * this.scale;
+            ctx.lineWidth = 2 * this.scale;
             ctx.stroke();
         }
 
-        // Add some small detail clusters for texture
-        ctx.fillStyle = darkShade;
-        for (let i = 0; i < circleCount + 2; i++) {
-            const angle = (i / (circleCount + 2)) * Math.PI * 2;
-            const detailX = this.x + Math.cos(angle) * (this.width * 0.25);
-            const detailY = drawY + Math.sin(angle) * (this.height * 0.25);
+        // Third pass: Add highlight clusters on top (lighter spots for dimension)
+        ctx.fillStyle = lightShade;
+        const highlightCount = Math.floor(circleCount * 1.5);
+        for (let i = 0; i < highlightCount; i++) {
+            const angle = (i / highlightCount) * Math.PI * 2 + Math.PI / 4; // Offset for upper-left lighting
+            const dist = this.width * 0.15 + Math.random() * this.width * 0.15;
+            const highlightX = this.x + Math.cos(angle) * dist;
+            const highlightY = drawY + Math.sin(angle) * dist - this.height * 0.1; // Bias upward
+            const highlightRadius = (3 + Math.random() * 4) * this.scale;
+
             ctx.beginPath();
-            ctx.arc(detailX, detailY, 2 * this.scale, 0, Math.PI * 2);
+            ctx.arc(highlightX, highlightY, highlightRadius, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Draw berries/seeds if present
+        // Fourth pass: Add darker accent clusters for texture/depth
+        ctx.fillStyle = darkShade;
+        const accentCount = circleCount + 2;
+        for (let i = 0; i < accentCount; i++) {
+            const angle = (i / accentCount) * Math.PI * 2 - Math.PI / 4; // Offset for lower-right shadows
+            const dist = this.width * 0.2 + Math.random() * this.width * 0.15;
+            const accentX = this.x + Math.cos(angle) * dist;
+            const accentY = drawY + Math.sin(angle) * dist + this.height * 0.1; // Bias downward
+            const accentRadius = (2 + Math.random() * 3) * this.scale;
+
+            ctx.beginPath();
+            ctx.arc(accentX, accentY, accentRadius, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Draw berries/seeds if present (flat style)
         if (this.fruitCount > 0) {
             const fruitColor = this.fruitType === 'berry' ? '#8B0000' : '#D2691E';
-            const fruitHighlight = this.fruitType === 'berry' ? '#CD5C5C' : '#F4A460';
+            const fruitHighlight = this.fruitType === 'berry' ? '#FF6B6B' : '#FFD700';
 
             for (let i = 0; i < this.fruitCount; i++) {
                 const angle = (i / this.fruitCount) * Math.PI * 2;
@@ -13789,23 +13812,22 @@ class Bush {
                 const fruitY = drawY + Math.sin(angle) * (this.height * 0.3);
                 const fruitRadius = 3 * this.scale;
 
-                // Fruit with highlight
-                const fruitGradient = ctx.createRadialGradient(
-                    fruitX - fruitRadius * 0.3, fruitY - fruitRadius * 0.3, 0,
-                    fruitX, fruitY, fruitRadius
-                );
-                fruitGradient.addColorStop(0, fruitHighlight);
-                fruitGradient.addColorStop(1, fruitColor);
-
-                ctx.fillStyle = fruitGradient;
+                // Fruit base (flat color)
+                ctx.fillStyle = fruitColor;
                 ctx.beginPath();
                 ctx.arc(fruitX, fruitY, fruitRadius, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Small outline on fruit
-                ctx.strokeStyle = darkenColor(fruitColor, 30);
-                ctx.lineWidth = 0.5;
+                // Fruit outline
+                ctx.strokeStyle = darkenColor(fruitColor, 40);
+                ctx.lineWidth = 1;
                 ctx.stroke();
+
+                // Small highlight dot (flat, no gradient)
+                ctx.fillStyle = fruitHighlight;
+                ctx.beginPath();
+                ctx.arc(fruitX - fruitRadius * 0.3, fruitY - fruitRadius * 0.3, fruitRadius * 0.4, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
 
