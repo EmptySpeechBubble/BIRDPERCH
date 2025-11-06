@@ -7714,6 +7714,85 @@ function drawWorms() {
                     debugLog(`🌲 Rare TALL tree spawned at (${x})! Height: ${trunkHeight.toFixed(0)}`);
                 }
 
+                // NEW: Rare tree type variants (5-10% chance for special types)
+                this.treeVariant = null;
+                this.barkColor = '#8B4513'; // Default brown
+                this.leafColor = '#228B22'; // Default green
+                this.leafColorNight = '#1A6B1A'; // Default dark green
+
+                const variantRoll = Math.random();
+                if (variantRoll < 0.10) { // 10% total chance for special trees
+                    const variants = [
+                        {
+                            name: 'Birch',
+                            barkColor: '#F5F5DC', // Beige/white bark
+                            leafColor: '#90EE90', // Light green leaves
+                            leafColorNight: '#6B8E6B',
+                            trunkMod: 0.9, // Slightly thinner
+                            heightMod: 1.1, // Slightly taller
+                        },
+                        {
+                            name: 'Cherry',
+                            barkColor: '#8B4726', // Dark reddish-brown
+                            leafColor: '#FFB7C5', // Pink blossoms
+                            leafColorNight: '#CC8FA3',
+                            leafMod: 1.15, // Fuller canopy
+                        },
+                        {
+                            name: 'Willow',
+                            barkColor: '#6B5B45', // Grayish-brown
+                            leafColor: '#9ACD32', // Yellow-green
+                            leafColorNight: '#7A9E2A',
+                            heightMod: 1.25, // Taller
+                            trunkMod: 0.85, // Thinner
+                        },
+                        {
+                            name: 'Oak',
+                            barkColor: '#654321', // Dark brown
+                            leafColor: '#228B22', // Deep green
+                            leafColorNight: '#1A6B1A',
+                            trunkMod: 1.25, // Thicker trunk
+                            widthMod: 1.2, // Wider canopy
+                        },
+                        {
+                            name: 'Pine',
+                            barkColor: '#5C4033', // Reddish-brown
+                            leafColor: '#013220', // Dark evergreen
+                            leafColorNight: '#012818',
+                            leafMod: 0.85, // Narrower
+                            heightMod: 1.2, // Taller
+                        },
+                        {
+                            name: 'Maple',
+                            barkColor: '#7A6F5D', // Light brown-gray
+                            leafColor: '#DC143C', // Crimson (fall colors)
+                            leafColorNight: '#B01030',
+                            leafMod: 1.1, // Fuller
+                        },
+                        {
+                            name: 'Aspen',
+                            barkColor: '#E8E8E8', // Very light gray/white
+                            leafColor: '#FFD700', // Golden (fall)
+                            leafColorNight: '#CCA000',
+                            heightMod: 1.15,
+                            trunkMod: 0.8, // Thin trunk
+                        }
+                    ];
+
+                    this.treeVariant = variants[Math.floor(Math.random() * variants.length)];
+                    this.barkColor = this.treeVariant.barkColor;
+                    this.leafColor = this.treeVariant.leafColor;
+                    this.leafColorNight = this.treeVariant.leafColorNight;
+
+                    // Apply modifications
+                    if (this.treeVariant.trunkMod) trunkWidth *= this.treeVariant.trunkMod;
+                    if (this.treeVariant.heightMod) trunkHeight *= this.treeVariant.heightMod;
+                    if (this.treeVariant.leafMod) leafRadius *= this.treeVariant.leafMod;
+                    if (this.treeVariant.widthMod) leafRadius *= this.treeVariant.widthMod;
+
+                    debugLog(`🌳 Rare ${this.treeVariant.name} tree spawned at (${x})!`);
+                }
+
                 this.trunkWidth = trunkWidth;
                 this.trunkHeight = trunkHeight;
                 this.leafRadius = leafRadius;
@@ -7787,19 +7866,19 @@ function drawWorms() {
                 ctx.scale(this.scale, this.scale);
                 
                 // Trunk (drawing relative to 0,0)
-                ctx.fillStyle = '#8B4513';
+                ctx.fillStyle = this.barkColor;
                 ctx.beginPath();
                 ctx.moveTo(-this.trunkWidth / 2, 0);
                 ctx.quadraticCurveTo(
-                    0, 
+                    0,
                     -this.trunkHeight / 2,
-                    0, 
+                    0,
                     -this.trunkHeight
                 );
                 ctx.quadraticCurveTo(
-                    0, 
+                    0,
                     -this.trunkHeight - 10,
-                    this.trunkWidth / 2, 
+                    this.trunkWidth / 2,
                     -this.trunkHeight
                 );
                 ctx.lineTo(this.trunkWidth / 2, 0);
@@ -7809,8 +7888,8 @@ function drawWorms() {
                 if (this.hasBranches) {
                     this.branches.forEach(branch => {
                         const branchY = -branch.height;
-                        
-                        ctx.strokeStyle = '#8B4513';
+
+                        ctx.strokeStyle = this.barkColor;
                         ctx.lineWidth = branch.thickness;
                         ctx.beginPath();
                         ctx.moveTo(0, branchY);
@@ -7828,19 +7907,19 @@ function drawWorms() {
                         ctx.stroke();
                         
                         // Small leaf clusters on branch tips
-                        ctx.fillStyle = '#2E8B57';
+                        ctx.fillStyle = timeOfDay < 1 ? this.leafColor : this.leafColorNight;
                         ctx.beginPath();
                         ctx.arc(endX, endY, this.leafRadius * 0.4, 0, Math.PI * 2);
                         ctx.fill();
                     });
                 }
 
-                // Leaves - keep original colors but ensure proper rgb format
+                // Leaves - use variant colors if available
                 const leafX = 0;
                 const leafY = -this.trunkHeight - this.leafRadius;
-                
+
                 // Draw main leaf cluster
-                ctx.fillStyle = timeOfDay < 1 ? 'rgb(34, 139, 34)' : 'rgb(26, 107, 26)';
+                ctx.fillStyle = timeOfDay < 1 ? this.leafColor : this.leafColorNight;
                 ctx.beginPath();
                 ctx.arc(leafX, leafY, this.leafRadius, 0, Math.PI * 2);
                 ctx.fill();
@@ -7852,16 +7931,20 @@ function drawWorms() {
                     const offsetDistance = this.leafRadius * 0.6;
                     const offsetX = Math.cos(angle) * offsetDistance;
                     const offsetY = Math.sin(angle) * offsetDistance;
-                    
-                    ctx.fillStyle = timeOfDay < 1 ? 
-                        'rgba(34, 139, 34, 0.8)' : 
-                        'rgba(26, 107, 26, 0.8)';
-                    
+
+                    // Convert hex to rgba with 0.8 opacity
+                    const baseColor = timeOfDay < 1 ? this.leafColor : this.leafColorNight;
+                    const rgb = parseInt(baseColor.slice(1), 16);
+                    const r = (rgb >> 16) & 255;
+                    const g = (rgb >> 8) & 255;
+                    const b = rgb & 255;
+                    ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.8)`;
+
                     ctx.beginPath();
                     ctx.arc(
-                        leafX + offsetX, 
-                        leafY + offsetY, 
-                        this.leafRadius * 0.7, 
+                        leafX + offsetX,
+                        leafY + offsetY,
+                        this.leafRadius * 0.7,
                         0, Math.PI * 2
                     );
                     ctx.fill();
@@ -13556,7 +13639,53 @@ class Bush {
     }
 
     generateBushColor() {
-        // Varied green shades for bushes
+        // 10% chance for rare bush variants
+        const variantRoll = Math.random();
+        if (variantRoll < 0.10) {
+            const rareVariants = [
+                {
+                    name: 'Flowering Azalea',
+                    color: '#FF69B4', // Pink flowers
+                    berryBonus: true
+                },
+                {
+                    name: 'Autumn Bush',
+                    color: '#FF6347', // Tomato red (fall foliage)
+                    berryBonus: false
+                },
+                {
+                    name: 'Lavender',
+                    color: '#9370DB', // Purple
+                    berryBonus: false
+                },
+                {
+                    name: 'Golden Barberry',
+                    color: '#DAA520', // Goldenrod
+                    berryBonus: true
+                },
+                {
+                    name: 'Blueberry Bush',
+                    color: '#4682B4', // Steel blue
+                    berryBonus: true
+                },
+                {
+                    name: 'Burning Bush',
+                    color: '#DC143C', // Crimson
+                    berryBonus: false
+                }
+            ];
+
+            const variant = rareVariants[Math.floor(Math.random() * rareVariants.length)];
+            this.bushVariant = variant.name;
+            if (variant.berryBonus) {
+                this.maxFruit += 2; // Bonus fruit
+                this.fruitGrowthRate *= 0.8; // 20% faster growth
+            }
+            debugLog(`🌺 Rare ${variant.name} bush spawned!`);
+            return variant.color;
+        }
+
+        // Default green shades for bushes
         const greenVariants = [
             '#2d5016', // Dark green
             '#3d6b1f', // Medium green
@@ -13744,7 +13873,52 @@ class Stone {
     }
 
     generateStoneColor() {
-        // Varied stone/rock colors (grays, browns)
+        // 8% chance for rare stone variants
+        const variantRoll = Math.random();
+        if (variantRoll < 0.08) {
+            const rareVariants = [
+                {
+                    name: 'Moss-Covered',
+                    color: '#556B2F', // Dark olive green
+                    sizeBonus: 1.15
+                },
+                {
+                    name: 'Granite',
+                    color: '#B0B0B0', // Light gray with sparkle
+                    sizeBonus: 1.25
+                },
+                {
+                    name: 'Sandstone',
+                    color: '#C2B280', // Sand tan
+                    sizeBonus: 1.1
+                },
+                {
+                    name: 'Slate',
+                    color: '#2F4F4F', // Dark slate gray
+                    sizeBonus: 0.9
+                },
+                {
+                    name: 'Quartz',
+                    color: '#E8E8E8', // Off-white
+                    sizeBonus: 0.95
+                },
+                {
+                    name: 'Reddish River Rock',
+                    color: '#8B4726', // Sienna
+                    sizeBonus: 1.05
+                }
+            ];
+
+            const variant = rareVariants[Math.floor(Math.random() * rareVariants.length)];
+            this.stoneVariant = variant.name;
+            if (variant.sizeBonus) {
+                this.size *= variant.sizeBonus;
+            }
+            debugLog(`🪨 Rare ${variant.name} stone spawned!`);
+            return variant.color;
+        }
+
+        // Default stone/rock colors (grays, browns)
         const stoneColors = [
             '#696969', // Dim gray
             '#808080', // Gray
