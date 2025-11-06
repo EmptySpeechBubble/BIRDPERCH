@@ -3950,15 +3950,25 @@ debugLog(`Rain event completed. Total rains: ${rainsCompleted}`);
 // 10% chance on every rain after 10 rains, and only if no pond exists yet
 if (rainsCompleted >= 10 && ponds.length === 0 && Math.random() < 0.10) {
     const pondX = 100 + Math.random() * (canvas.width - 200);
-    const pondWidth = 100 + Math.random() * 60;
-    const pondHeight = 50 + Math.random() * 30;
+
+    // IMPROVED: More size variation (80-180 width range)
+    const sizeMultiplier = 0.8 + Math.random() * 1.0; // 0.8x to 1.8x
+    const pondWidth = (80 + Math.random() * 60) * sizeMultiplier;
+    const pondHeight = (40 + Math.random() * 30) * sizeMultiplier;
     const pondY = canvas.height * GROUND_HEIGHT_RATIO;
+
+    // IMPROVED: Random pond shapes
+    const shapes = ['round', 'oval', 'kidney', 'irregular'];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
     ponds.push({
         x: pondX,
         y: pondY,
         width: pondWidth,
         height: pondHeight,
+        depth: Math.random(), // Add depth for layering (0-1)
+        shape: shape, // Add shape variant
+        irregularPoints: 8, // Points for irregular shape
         rippleTimer: 0,
         ripples: []
     });
@@ -3998,16 +4008,35 @@ if (rainsCompleted >= 10 && ponds.length === 0 && Math.random() < 0.10) {
         color: koiColors[Math.floor(Math.random() * koiColors.length)]
     });
 
-    // Spawn a frog near the pond
-    frogs.push({
-        id: Math.random().toString(36).substr(2, 9), // Unique ID for naming
-        x: pondX + (Math.random() - 0.5) * 60,
-        y: canvas.height * GROUND_HEIGHT_RATIO,
-        jumpTimer: 0,
-        tongueOut: false
-    });
+    // IMPROVED: Spawn frogs based on pond size (bigger ponds = more frogs)
+    const pondArea = pondWidth * pondHeight;
+    const baseFrogCount = Math.max(1, Math.floor(pondArea / 5000)); // 1 frog per 5000 square units
+    const frogCount = baseFrogCount + (Math.random() < 0.5 ? 1 : 0); // +1 bonus frog 50% of time
 
-    debugLog(`Pond ecosystem spawned: 2 koi and 1 frog`);
+    for (let i = 0; i < frogCount; i++) {
+        // IMPROVED: Frog variants with different sizes and colors
+        const variants = [
+            { name: 'Green Tree Frog', color: '#4CAF50', size: 1.0 },
+            { name: 'Bull Frog', color: '#2E7D32', size: 1.3 },
+            { name: 'Poison Dart Frog', color: '#FF6B35', size: 0.7 },
+            { name: 'Golden Frog', color: '#FFD700', size: 0.8 },
+            { name: 'Blue Poison Frog', color: '#42A5F5', size: 0.75 }
+        ];
+        const variant = variants[Math.floor(Math.random() * variants.length)];
+
+        frogs.push({
+            id: Math.random().toString(36).substr(2, 9),
+            x: pondX + (Math.random() - 0.5) * pondWidth * 0.9,
+            y: canvas.height * GROUND_HEIGHT_RATIO,
+            jumpTimer: 0,
+            tongueOut: false,
+            color: variant.color, // IMPROVED: Frog color variant
+            size: variant.size, // IMPROVED: Frog size variant
+            variant: variant.name
+        });
+    }
+
+    debugLog(`Pond ecosystem spawned: 2 koi and ${frogCount} frog(s)`);
 }
 
 // Only create puddles if tab is visible
@@ -4030,11 +4059,12 @@ if (trees.length > 0 && Math.random() < 0.15) {
 
 
 
-                                // Keep wasRaining true for longer (1 minute)
+                                // IMPROVED: Keep wasRaining true for longer (3 minutes instead of 1)
+                                // This gives birds more time to finish current tasks before bathing
                                 const rainMemoryTimer = setTimeout(() => {
                                     wasRaining = false;
                                     debugLog("Birds no longer remember it rained recently");
-                                }, 60000);
+                                }, 180000); // 3 minutes (was 60000)
                                 addTimer(rainMemoryTimer);
                                 
                                 // Store interval ID in a variable first, then pass to clearInterval
@@ -4315,14 +4345,42 @@ if (trees.length > 0 && Math.random() < 0.15) {
 
         // Draw ponds (permanent water features)
         function drawPonds() {
-            ponds.forEach(pond => {
+            // IMPROVED: Sort ponds by depth for proper layering (back to front)
+            const sortedPonds = [...ponds].sort((a, b) => (b.depth || 0.5) - (a.depth || 0.5));
+
+            sortedPonds.forEach(pond => {
                 // Draw pond with top edge at ground level (center below ground)
                 const drawY = pond.y + pond.height;
+
+                // IMPROVED: Different pond shapes for variety
+                const shape = pond.shape || 'round'; // Default to round for existing ponds
 
                 // Pond base - simplified solid colors for better performance
                 ctx.fillStyle = mushroomMode ? getMushroomColor('rgba(50, 110, 190, 0.85)') : 'rgba(50, 110, 190, 0.85)';
                 ctx.beginPath();
-                ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+
+                if (shape === 'round') {
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+                } else if (shape === 'oval') {
+                    // Stretched ellipse
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height * 0.6, 0, 0, Math.PI * 2);
+                } else if (shape === 'kidney') {
+                    // Kidney-shaped pond (two overlapping circles)
+                    ctx.arc(pond.x - pond.width * 0.2, drawY, pond.width * 0.7, 0, Math.PI * 2);
+                    ctx.arc(pond.x + pond.width * 0.2, drawY, pond.width * 0.7, 0, Math.PI * 2);
+                } else if (shape === 'irregular') {
+                    // Irregular blob shape
+                    const points = pond.irregularPoints || 8;
+                    for (let i = 0; i <= points; i++) {
+                        const angle = (i / points) * Math.PI * 2;
+                        const radius = pond.width * (0.7 + Math.sin(angle * 3) * 0.3);
+                        const px = pond.x + Math.cos(angle) * radius;
+                        const py = drawY + Math.sin(angle) * (pond.height * (0.7 + Math.cos(angle * 2) * 0.3));
+                        if (i === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.closePath();
+                }
                 ctx.fill();
 
                 // Reflections/highlights
@@ -4335,7 +4393,13 @@ if (trees.length > 0 && Math.random() < 0.15) {
                 // Apply clipping to keep ripples within pond boundaries
                 ctx.save();
                 ctx.beginPath();
-                ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+                if (shape === 'round' || shape === 'oval') {
+                    const heightRatio = shape === 'oval' ? 0.6 : 1.0;
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height * heightRatio, 0, 0, Math.PI * 2);
+                } else {
+                    // Use bounding ellipse for clipping irregular shapes
+                    ctx.ellipse(pond.x, drawY, pond.width, pond.height, 0, 0, Math.PI * 2);
+                }
                 ctx.clip();
 
                 const visibleRipples = pond.ripples.slice(0, 5);
@@ -4489,29 +4553,37 @@ fish.y = pondCenterY + Math.sin(fish.swimAngle * 2) * radius * 0.4;
         // Draw frogs
         function drawFrogs() {
             frogs.forEach(frog => {
+                // IMPROVED: Use frog size and color variants
+                const frogSize = frog.size || 1.0; // Default to 1.0 if not set
+                const frogColor = frog.color || '#4CAF50'; // Default to green
+
                 // Frog body (expand slightly when croaking)
-                const bodySize = frog.croaking ? 1.2 : 1;
-                ctx.fillStyle = mushroomMode ? getMushroomColor('#4CAF50') : '#4CAF50';
+                const bodySize = (frog.croaking ? 1.2 : 1) * frogSize;
+                ctx.fillStyle = mushroomMode ? getMushroomColor(frogColor) : frogColor;
                 ctx.beginPath();
                 ctx.ellipse(frog.x, frog.y, 8 * bodySize, 6 * bodySize, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Eyes
+                // Eyes (scaled with frog size)
+                const eyeOffset = 3 * frogSize;
+                const eyeY = frog.y - 4 * frogSize;
+                const eyeRadius = 3 * frogSize;
                 ctx.fillStyle = mushroomMode ? getMushroomColor('#FFD700') : '#FFD700';
                 ctx.beginPath();
-                ctx.arc(frog.x - 3, frog.y - 4, 3, 0, Math.PI * 2);
+                ctx.arc(frog.x - eyeOffset, eyeY, eyeRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(frog.x + 3, frog.y - 4, 3, 0, Math.PI * 2);
+                ctx.arc(frog.x + eyeOffset, eyeY, eyeRadius, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Pupils
+                // Pupils (scaled with frog size)
+                const pupilRadius = 1.5 * frogSize;
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(frog.x - 3, frog.y - 4, 1.5, 0, Math.PI * 2);
+                ctx.arc(frog.x - eyeOffset, eyeY, pupilRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(frog.x + 3, frog.y - 4, 1.5, 0, Math.PI * 2);
+                ctx.arc(frog.x + eyeOffset, eyeY, pupilRadius, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Croaking indicator (sound waves)
@@ -5976,11 +6048,11 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 this.occupiedBy = null;
                 this.health = 100;
                 this.condition = 100;  // Tracks physical condition of nest (100 = perfect)
-                this.deteriorationRate = 0.005;  // Base rate of deterioration per second
+                this.deteriorationRate = 0.002;  // REDUCED: Base rate of deterioration per second (was 0.005, now 2.5x slower)
                 this.lastMaintenanceTime = Date.now(); // Track last time maintenance was performed
                 this.needsMaintenance = false; // Flag for when nest needs attention
-                this.maintenanceThreshold = 60; // Below this condition, nest needs repair
-                this.failureThreshold = 20; // Below this condition, nest becomes incomplete
+                this.maintenanceThreshold = 50; // REDUCED: Below this condition, nest needs repair (was 60, gives more buffer)
+                this.failureThreshold = 15; // REDUCED: Below this condition, nest becomes incomplete (was 20, gives more time before collapse)
                 this.ratOccupied = false; // Track if a rat has taken over
                 this.readyForBabies = false; // Explicit flag for baby creation
                 this.lastBabyTime = 0; // Track when the last baby was born
@@ -6108,13 +6180,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 
                 // Track occupancy and adjust degradation for abandoned nests
                 if (this.occupiedBy) {
-                    deteriorationAmount *= 0.5; // Halve deterioration if occupied
+                    deteriorationAmount *= 0.3; // IMPROVED: Reduce deterioration to 30% if occupied (was 50%)
                     this.lastOccupiedTime = Date.now(); // Update last occupied time
                     this.abandonedDegradationMultiplier = 1.0; // Reset multiplier
 
-                    // Occasional minor repairs when occupied
-                    if (Math.random() < 0.01 * (deltaTime / 1000)) {
-                        this.condition = Math.min(100, this.condition + 1);
+                    // IMPROVED: More frequent minor repairs when occupied
+                    if (Math.random() < 0.02 * (deltaTime / 1000)) { // 2x more likely (was 0.01)
+                        this.condition = Math.min(100, this.condition + 2); // Repair 2 points instead of 1
                         debugLog(`Bird made minor repairs to nest at (${this.x}, ${this.y})`);
                     }
                 } else {
@@ -6122,12 +6194,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     const timeSinceOccupied = Date.now() - this.lastOccupiedTime;
                     const daysAbandoned = timeSinceOccupied / (dayNightDuration * 0.5); // Game days
 
-                    // Increase degradation multiplier for long-abandoned nests
-                    if (daysAbandoned > 1) {
-                        // After 1 day: 2x degradation
-                        // After 2 days: 3x degradation
-                        // After 3+ days: 4x degradation
-                        this.abandonedDegradationMultiplier = Math.min(4, 1 + daysAbandoned);
+                    // REDUCED: Increase degradation multiplier for long-abandoned nests (was 2-4x, now 1.3-2x)
+                    // Birds may be busy with birdhouse building, so don't punish abandoned nests as harshly
+                    if (daysAbandoned > 3) {
+                        // After 3 days: 1.3x degradation
+                        // After 5 days: 1.6x degradation
+                        // After 7+ days: 2x degradation max
+                        this.abandonedDegradationMultiplier = Math.min(2, 1 + (daysAbandoned - 3) * 0.15);
                         deteriorationAmount *= this.abandonedDegradationMultiplier;
                     }
                 }
@@ -8578,6 +8651,10 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 this.chirpCooldown = 0;
                 this.lastContactCall = 0;
 
+                // Behavior cooldowns (in milliseconds)
+                this.lastBathedTime = 0;
+                this.lastPreenedTime = 0;
+
                 // Ground pecking
                 this.isOnGround = false;
                 this.peckingInterval = PECKING_INTERVAL_SOLO;
@@ -10356,9 +10433,14 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                 break;
                             }
 
-                            // FIX: CHECK FOR BATHING FIRST - check both puddles and ponds:
-                            if ((puddles.length > 0 || ponds.length > 0) && Math.random() < 0.4) { // 40% chance to bathe if water exists
+                            // IMPROVED: CHECK FOR BATHING FIRST - check both puddles and ponds
+                            // Higher chance if recent rain, or if ponds exist (permanent water source)
+                            const bathingCooldown = 300000 + Math.random() * 300000; // 5-10 minutes
+                            const timeSinceLastBath = Date.now() - this.lastBathedTime;
+                            const bathingChance = wasRaining ? 0.6 : (ponds.length > 0 ? 0.3 : 0.2);
+                            if ((puddles.length > 0 || ponds.length > 0) && Math.random() < bathingChance && timeSinceLastBath > bathingCooldown) {
                                 this.findPuddle();
+                                debugLog(`Bird seeking water to bathe from IDLE state - chance: ${bathingChance}`);
                             }
 
                             // V26: Adjusted state preferences for more perching
@@ -10901,9 +10983,16 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                     twigs.splice(twigIndex, 1);
                                     this.materialsHeld = 1; // Carrying one twig
                                     debugLog(`Bird collected${this.hasSpecialTwig ? ' special' : ''} twig.`);
+                                } else {
+                                    // FIXED: Twig was already collected by another bird - clear target and find another
+                                    this.target = null;
+                                    this.state = BIRD_STATES.FLYING;
+                                    this.stateTimer = 0;
+                                    debugLog(`Bird's target twig was already collected - searching for another`);
+                                    break; // Exit COLLECTING case immediately
                                 }
                             }
-                            
+
                             // FIXED: Prioritize ongoing birdhouse construction over completed nests
                             if (this.isWild) {
                                 // Wild birds don't build nests - just drop the twig
@@ -11528,9 +11617,12 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                             } else if (!this.isWild && babyBirds.length > 0 && Math.random() < 0.5) { // Reduced from 0.6
                                 // Look for babies to feed
                                 this.findBabyBirds();
-                            } else if (wasRaining && puddles.length > 0 && Math.random() < 0.3) {
-                                // Go take a bath in a puddle
+                            } else if (((wasRaining && puddles.length > 0) || (ponds.length > 0 && Math.random() < 0.4)) && (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000)) {
+                                // FIXED: Go bathe in puddles after rain OR in ponds anytime (40% chance)
+                                // Ponds are permanent water sources - birds should use them even without recent rain
+                                // Cooldown: 5-10 minutes between baths
                                 this.findPuddle();
+                                debugLog(`Bird seeking water to bathe - ${wasRaining ? 'after rain' : 'at pond'}`);
                             } else {
                                 // V26: More likely to find a new perch than to fly
                                 if (Math.random() < 0.6) { // 60% chance to perch
@@ -11656,10 +11748,17 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                         // If already at water source
                         const bathingRadius = waterType === 'pond' ? 25 : 15; // Larger radius for ponds
                         if (minDist < bathingRadius) {
+                            // IMPROVED: Log when bird starts bathing (only once)
+                            if (!this.bathingStarted) {
+                                this.bathingStarted = true;
+                                this.lastBathedTime = Date.now(); // Update cooldown timer
+                                debugLog(`Bird bathing in ${waterType} at (${nearestWater.x.toFixed(0)}, ${nearestWater.y.toFixed(0)})`);
+                            }
+
                             // Bathing behavior - animated fluttering
                             this.velocity.x *= 0.5;
                             this.velocity.y *= 0.5;
-                            
+
                             // Splashing motions
                             if (Math.random() < 0.2) {
                                 // FIX: Add ripple to water source (puddle or pond)
@@ -11669,6 +11768,11 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                         maxSize: 5 + Math.random() * 8,
                                         speed: 0.1 + Math.random() * 0.1
                                     });
+
+                                    // IMPROVED: Occasional log for ripple creation
+                                    if (Math.random() < 0.1) {
+                                        debugLog(`Bird creating ripples while bathing in ${waterType}`);
+                                    }
                                 }
 
                                 // Random motion
@@ -11677,13 +11781,15 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                     y: (Math.random() - 0.5) * 0.05
                                 });
                             }
-                            
+
                             // End bathing after a while
                             if (this.stateTimer > BIRD_STATE_DURATION.BATHING) {
                                 // CRITICAL: Birds ALWAYS preen after bathing (realistic behavior)
                                 this.state = BIRD_STATES.PREENING;
                                 this.stateTimer = 0;
                                 this.isOnGround = Math.abs(this.y - (canvas.height * GROUND_HEIGHT_RATIO)) < (30 * getResponsiveScale());
+                                this.bathingStarted = false; // Reset for next time
+                                debugLog(`Bird finished bathing, now preening`);
                             }
                         } else {
                             // FIX: Move toward water source (puddle or pond)
@@ -11718,6 +11824,11 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
 
                     case BIRD_STATES.PREENING:
                         // Grooming feathers after bathing, eating, or while idle
+                        // Update timestamp on first frame of preening
+                        if (this.stateTimer < 100) {
+                            this.lastPreenedTime = Date.now();
+                        }
+
                         this.velocity.x *= 0.9; // Slow movement while preening
                         this.velocity.y *= 0.9;
 
@@ -12184,6 +12295,11 @@ if (this.pathIndex >= this.path.length) {
                                 } else if (this.hunger > HUNGER_CRITICAL_THRESHOLD - 50) {
                                     // Always find food if hungry
                                     this.findFoodSource();
+                                } else if ((wasRaining || ponds.length > 0) && Math.random() < 0.15 && (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000)) {
+                                    // IMPROVED: 15% chance to bathe when flying (if water exists)
+                                    // Cooldown: 5-10 minutes between baths
+                                    this.findPuddle();
+                                    debugLog(`Bird deciding to bathe from FLYING state`);
                                 } else if (!this.isWild && !this.myNest && r < 0.1) {
                                     // Find building materials (FIXED: removed twigs.length requirement)
                                     this.findTwigs();
@@ -13705,9 +13821,13 @@ class Bush {
     constructor(x, depth) {
         this.x = x;
         this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground, 1 = background)
-        this.scale = 1 - this.depth * 0.3; // Scale based on depth (0.7x to 1.0x)
-        this.width = (40 + Math.random() * 30) * this.scale; // Varied bush widths, scaled by depth
-        this.height = (30 + Math.random() * 20) * this.scale; // Varied heights, scaled by depth
+
+        // IMPROVED: Add random size variation - some bushes are bigger (up to 1.5x)
+        const randomSizeMultiplier = 0.8 + Math.random() * 0.7; // 0.8x to 1.5x
+        this.scale = (1 - this.depth * 0.3) * randomSizeMultiplier; // Depth scale (0.7x to 1.0x) * random size
+
+        this.width = (40 + Math.random() * 30) * this.scale; // Varied bush widths, scaled by depth and size
+        this.height = (30 + Math.random() * 20) * this.scale; // Varied heights, scaled by depth and size
 
         // Depth offset: foreground bushes go deeper into grass area for depth perception
         const depthOffset = this.depth < 0.3 ? (15 + Math.random() * 30) : (Math.random() * 15);
@@ -13738,32 +13858,32 @@ class Bush {
             const rareVariants = [
                 {
                     name: 'Flowering Azalea',
-                    color: '#FF69B4', // Pink flowers
+                    color: '#B87B8D', // Pink with green tint (was #FF69B4)
                     berryBonus: true
                 },
                 {
                     name: 'Autumn Bush',
-                    color: '#FF6347', // Tomato red (fall foliage)
+                    color: '#A0623A', // Red-orange with green tint (was #FF6347)
                     berryBonus: false
                 },
                 {
                     name: 'Lavender',
-                    color: '#9370DB', // Purple
+                    color: '#7B6B8F', // Purple with green tint (was #9370DB)
                     berryBonus: false
                 },
                 {
                     name: 'Golden Barberry',
-                    color: '#DAA520', // Goldenrod
+                    color: '#9B8A42', // Gold with green tint (was #DAA520)
                     berryBonus: true
                 },
                 {
                     name: 'Blueberry Bush',
-                    color: '#4682B4', // Steel blue
+                    color: '#527B6F', // Blue-green (was #4682B4)
                     berryBonus: true
                 },
                 {
                     name: 'Burning Bush',
-                    color: '#DC143C', // Crimson
+                    color: '#8B4A42', // Crimson with green tint (was #DC143C)
                     berryBonus: false
                 }
             ];
@@ -21782,15 +21902,45 @@ if (mushroomMode) {
     }
 
     // ===== MIDDLE GROUND LAYER =====
-    // Draw trees in proper depth order (back to front)
-    drawTrees(deltaTime);
+    // FIXED: Combine trees and bushes for proper depth-based layering
+    // This prevents the illusion from breaking when bushes overlap trees at different depths
 
-    // Update and draw bushes (sorted by depth for proper layering)
-    bushes.sort((a, b) => b.depth - a.depth); // Back to front
-    bushes.forEach(bush => {
-        bush.update();
-        bush.draw();
-    });
+    // Update tree degradation first
+    for (let i = trees.length - 1; i >= 0; i--) {
+        const tree = trees[i];
+        const shouldRemove = tree.degrade(deltaTime);
+        if (shouldRemove) {
+            // Remove nests associated with this tree
+            nests = nests.filter(nest => nest.tree !== tree);
+
+            // Make birds fly away when their tree disappears
+            birds.forEach(bird => {
+                if (bird.perchTarget && bird.perchTarget.tree === tree) {
+                    bird.perchTarget = null;
+                    bird.state = BIRD_STATES.FLYING;
+                    bird.stateTimer = 0;
+                    const targetX = 100 + Math.random() * (canvas.width - 200);
+                    const targetY = 100 + Math.random() * (canvas.height * 0.3);
+                    bird.generatePath(targetX, targetY);
+                }
+            });
+
+            trees.splice(i, 1);
+        }
+    }
+
+    // Update bushes
+    bushes.forEach(bush => bush.update());
+
+    // Combine and sort vegetation by depth for proper layering
+    const vegetationItems = [
+        ...trees.map(tree => ({ type: 'tree', obj: tree, depth: tree.depth })),
+        ...bushes.map(bush => ({ type: 'bush', obj: bush, depth: bush.depth }))
+    ];
+    vegetationItems.sort((a, b) => b.depth - a.depth);
+
+    // Draw in depth order
+    vegetationItems.forEach(item => item.obj.draw());
 
     // Update and draw tall grass patches
     tallGrassPatches.forEach(grass => {
@@ -21798,8 +21948,9 @@ if (mushroomMode) {
         grass.draw();
     });
 
-    // Draw decorative stones/rocks
-    stones.forEach(stone => {
+    // IMPROVED: Draw decorative stones/rocks sorted by depth for proper layering
+    const sortedStones = [...stones].sort((a, b) => b.depth - a.depth);
+    sortedStones.forEach(stone => {
         stone.draw();
     });
 
@@ -22435,16 +22586,19 @@ function drawFullScene() {
     }
 
     // ===== MIDDLE GROUND LAYER =====
-    // Draw trees in depth order
-    const sortedTrees = [...trees].sort((a, b) => b.depth - a.depth);
-    for (const tree of sortedTrees) {
-        tree.draw();
-    }
+    // FIXED: Combine trees and bushes for proper depth-based layering
+    // This prevents bushes from always appearing in front of trees regardless of depth
+    const vegetationItems = [
+        ...trees.map(tree => ({ type: 'tree', obj: tree, depth: tree.depth })),
+        ...bushes.map(bush => ({ type: 'bush', obj: bush, depth: bush.depth }))
+    ];
 
-    // Draw bushes sorted by depth for proper layering
-    const sortedBushes = [...bushes].sort((a, b) => b.depth - a.depth);
-    for (const bush of sortedBushes) {
-        bush.draw();
+    // Sort by depth (back to front) so items further back are drawn first
+    vegetationItems.sort((a, b) => b.depth - a.depth);
+
+    // Draw in depth order for correct layering
+    for (const item of vegetationItems) {
+        item.obj.draw();
     }
 
     // Draw tall grass patches
@@ -22452,8 +22606,9 @@ function drawFullScene() {
         grass.draw();
     }
 
-    // Draw decorative stones
-    for (const stone of stones) {
+    // IMPROVED: Draw decorative stones sorted by depth for proper layering
+    const sortedStones = [...stones].sort((a, b) => b.depth - a.depth);
+    for (const stone of sortedStones) {
         stone.draw();
     }
 
@@ -22832,16 +22987,26 @@ function drawFullScene() {
 
             // 10% chance to spawn a pond on initial load
             if (Math.random() < 0.1) {
-                const pondWidth = 80 + Math.random() * 40;
-                const pondHeight = 50 + Math.random() * 30;
                 const pondX = 100 + Math.random() * (canvas.width - 200);
                 const pondY = canvas.height * GROUND_HEIGHT_RATIO;
+
+                // IMPROVED: More size variation
+                const sizeMultiplier = 0.8 + Math.random() * 1.0; // 0.8x to 1.8x
+                const pondWidth = (80 + Math.random() * 50) * sizeMultiplier;
+                const pondHeight = (40 + Math.random() * 30) * sizeMultiplier;
+
+                // IMPROVED: Random pond shapes
+                const shapes = ['round', 'oval', 'kidney', 'irregular'];
+                const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
                 ponds.push({
                     x: pondX,
                     y: pondY,
                     width: pondWidth,
                     height: pondHeight,
+                    depth: Math.random(), // Add depth for layering
+                    shape: shape, // Add shape variant
+                    irregularPoints: 8,
                     ripples: []
                 });
 
@@ -22858,16 +23023,34 @@ function drawFullScene() {
                     });
                 }
 
-                // Add 1 frog to the pond
-                frogs.push({
-                    id: Math.random().toString(36).substr(2, 9), // Unique ID for naming
-                    x: pondX + (Math.random() - 0.5) * pondWidth * 0.8,
-                    y: canvas.height * GROUND_HEIGHT_RATIO,
-                    jumping: false,
-                    jumpTimer: 0,
-                    tongueOut: false,
-                    tongueTarget: null
-                });
+                // IMPROVED: Add frogs based on pond size
+                const pondArea = pondWidth * pondHeight;
+                const baseFrogCount = Math.max(1, Math.floor(pondArea / 5000));
+                const frogCount = baseFrogCount + (Math.random() < 0.5 ? 1 : 0);
+
+                for (let i = 0; i < frogCount; i++) {
+                    const variants = [
+                        { name: 'Green Tree Frog', color: '#4CAF50', size: 1.0 },
+                        { name: 'Bull Frog', color: '#2E7D32', size: 1.3 },
+                        { name: 'Poison Dart Frog', color: '#FF6B35', size: 0.7 },
+                        { name: 'Golden Frog', color: '#FFD700', size: 0.8 },
+                        { name: 'Blue Poison Frog', color: '#42A5F5', size: 0.75 }
+                    ];
+                    const variant = variants[Math.floor(Math.random() * variants.length)];
+
+                    frogs.push({
+                        id: Math.random().toString(36).substr(2, 9),
+                        x: pondX + (Math.random() - 0.5) * pondWidth * 0.8,
+                        y: canvas.height * GROUND_HEIGHT_RATIO,
+                        jumping: false,
+                        jumpTimer: 0,
+                        tongueOut: false,
+                        tongueTarget: null,
+                        color: variant.color,
+                        size: variant.size,
+                        variant: variant.name
+                    });
+                }
 
                 debugLog(`Initial pond spawned at (${pondX}, ${pondY}) with koi and frog`);
             }
@@ -23556,11 +23739,18 @@ const spawnPondBtn = document.getElementById('spawnPondBtn');
 spawnPondBtn.addEventListener('click', () => {
     // Create pond at random location
     const x = 100 + Math.random() * (canvas.width - 200);
-    const width = 80 + Math.random() * 40;
-    const height = 40 + Math.random() * 20;
+
+    // IMPROVED: More size variation
+    const sizeMultiplier = 0.8 + Math.random() * 1.0; // 0.8x to 1.8x
+    const width = (80 + Math.random() * 50) * sizeMultiplier;
+    const height = (40 + Math.random() * 25) * sizeMultiplier;
 
     // Position pond so top edge aligns with ground (appears to be in the ground)
     const y = canvas.height * GROUND_HEIGHT_RATIO + height / 2;
+
+    // IMPROVED: Random pond shapes
+    const shapes = ['round', 'oval', 'kidney', 'irregular'];
+    const shape = shapes[Math.floor(Math.random() * shapes.length)];
 
     if (!ponds) ponds = [];
 
@@ -23569,11 +23759,14 @@ spawnPondBtn.addEventListener('click', () => {
         y: y,
         width: width,
         height: height,
+        depth: Math.random(), // Add depth for layering
+        shape: shape, // Add shape variant
+        irregularPoints: 8,
         rippleTimer: 0,
         ripples: []
     });
 
-    debugLog(`Pond spawned at (${x}, ${y}), size: ${width}x${height}`);
+    debugLog(`Pond spawned at (${x}, ${y}), size: ${width}x${height}, shape: ${shape}`);
 });
 
 // Spawn a frog
@@ -23584,14 +23777,28 @@ spawnFrogBtn.addEventListener('click', () => {
     const x = 100 + Math.random() * (canvas.width - 200);
     const y = canvas.height * GROUND_HEIGHT_RATIO;
 
+    // IMPROVED: Use frog variants
+    const variants = [
+        { name: 'Green Tree Frog', color: '#4CAF50', size: 1.0 },
+        { name: 'Bull Frog', color: '#2E7D32', size: 1.3 },
+        { name: 'Poison Dart Frog', color: '#FF6B35', size: 0.7 },
+        { name: 'Golden Frog', color: '#FFD700', size: 0.8 },
+        { name: 'Blue Poison Frog', color: '#42A5F5', size: 0.75 }
+    ];
+    const variant = variants[Math.floor(Math.random() * variants.length)];
+
     frogs.push({
+        id: Math.random().toString(36).substr(2, 9),
         x: x,
         y: y,
         jumpTimer: 0,
-        tongueOut: false
+        tongueOut: false,
+        color: variant.color,
+        size: variant.size,
+        variant: variant.name
     });
 
-    debugLog(`Frog spawned at (${x}, ${y})`);
+    debugLog(`${variant.name} spawned at (${x}, ${y})`);
 });
 
 // Spawn a koi fish
