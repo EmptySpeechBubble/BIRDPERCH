@@ -2297,7 +2297,8 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
             DRINKING: 'drinking', // Drinking water (separate from bathing)
             ALARM: 'alarm', // Freeze response before fleeing
             NEST_SITTING: 'nest_sitting', // Incubating/warming nest
-            SLEEPING: 'sleeping' // Sleeping at night or during rest
+            SLEEPING: 'sleeping', // Sleeping at night or during rest
+            LEAVING: 'leaving' // Wild birds flying off screen to leave
         };
         
         const BIRDHOUSE_MATERIALS_NEEDED = 8; // Harder than nests (4 materials)
@@ -10006,7 +10007,8 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
 
             update(deltaTime) {
                 // Update wingflap with slower movement for calmer appearance
-                if (this.state === BIRD_STATES.FLYING || this.state === BIRD_STATES.FLEEING || 
+                if (this.state === BIRD_STATES.FLYING || this.state === BIRD_STATES.FLEEING ||
+                    this.state === BIRD_STATES.LEAVING ||
                     Math.abs(this.velocity.x) > 0.2 || Math.abs(this.velocity.y) > 0.2) {
                     this.wingFlap += 0.2 * deltaTime / 16; // Reduced from 0.3
                 } else {
@@ -10020,12 +10022,15 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                     return true; // Bird dies of hunger
                 }
                 
-                // Wild birds leave after a while (60-90 seconds), unless actively feeding/bathing
-                const wildBirdStayDuration = 60000 + Math.random() * 30000; // 60-90 seconds
+                // Wild birds leave after 1-2 days (4-8 minutes), unless actively feeding/bathing
+                const wildBirdStayDuration = 240000 + Math.random() * 240000; // 1-2 full day/night cycles (4-8 minutes)
                 const isActivelyFeeding = this.state === BIRD_STATES.EATING || this.state === BIRD_STATES.PECKING;
                 const isActivelyBathing = this.state === BIRD_STATES.BATHING || this.state === BIRD_STATES.DRINKING;
-                if (this.isWild && this.stateTimer > wildBirdStayDuration && !isActivelyFeeding && !isActivelyBathing) {
-                    return true; // Bird leaves the scene
+                if (this.isWild && this.stateTimer > wildBirdStayDuration && !isActivelyFeeding && !isActivelyBathing && this.state !== BIRD_STATES.LEAVING) {
+                    // Transition to leaving state instead of disappearing
+                    this.state = BIRD_STATES.LEAVING;
+                    this.stateTimer = 0;
+                    debugLog(`Wild ${this.birdType.name} beginning to leave after ${(wildBirdStayDuration/60000).toFixed(1)} minutes`);
                 }
                 
                 // Update poop timer - create smaller poops
@@ -11779,6 +11784,47 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                     this.stateTimer = 0;
                                 }
                             }
+                        }
+                        break;
+
+                    case BIRD_STATES.LEAVING:
+                        // Wild bird is leaving - fly off screen
+                        // If no exit target set, pick a random screen edge
+                        if (!this.exitTarget) {
+                            const edge = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+                            const exitX = edge === 1 ? canvas.width + 100 : (edge === 3 ? -100 : Math.random() * canvas.width);
+                            const exitY = edge === 0 ? -100 : (edge === 2 ? canvas.height + 100 : Math.random() * canvas.height * 0.5);
+
+                            this.exitTarget = { x: exitX, y: exitY };
+                            this.generatePath(exitX, exitY);
+                            debugLog(`Wild ${this.birdType.name} flying to exit at (${exitX.toFixed(0)}, ${exitY.toFixed(0)})`);
+                        }
+
+                        // Fly toward exit
+                        if (this.path && this.path.length > 0 && this.pathIndex < this.path.length) {
+                            const target = this.path[this.pathIndex];
+                            const dx = target.x - this.x;
+                            const dy = target.y - this.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+
+                            if (dist < 20) {
+                                this.pathIndex++;
+                            } else {
+                                const dir = normalize(dx, dy);
+                                this.applyForce({ x: dir.x * 0.02, y: dir.y * 0.02 });
+                                this.direction = dx > 0 ? 1 : -1;
+                            }
+                        }
+
+                        // Apply air resistance
+                        this.velocity.x *= AIR_RESISTANCE;
+                        this.velocity.y *= AIR_RESISTANCE;
+
+                        // Check if off-screen - remove bird
+                        if (this.x < -150 || this.x > canvas.width + 150 ||
+                            this.y < -150 || this.y > canvas.height + 150) {
+                            debugLog(`Wild ${this.birdType.name} has flown off screen and is leaving`);
+                            return true; // Remove bird
                         }
                         break;
 
