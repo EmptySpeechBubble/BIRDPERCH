@@ -286,6 +286,105 @@
             font-size: 12px;
         }
     }
+
+    /* Special Scenario Popup - Roguelite style */
+    .special-scenario-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.95) 0%, rgba(56, 142, 60, 0.95) 100%);
+        border: 3px solid rgba(255, 215, 0, 0.9);
+        border-radius: 15px;
+        padding: 30px 40px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5),
+                    inset 0 0 30px rgba(255, 255, 255, 0.2);
+        z-index: 1000;
+        pointer-events: all;
+        cursor: pointer;
+        min-width: 300px;
+        text-align: center;
+        animation: popupEnter 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+    }
+
+    .special-scenario-popup.show {
+        opacity: 1;
+    }
+
+    .special-scenario-popup.fade-out {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.95);
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+
+    @keyframes popupEnter {
+        0% {
+            transform: translate(-50%, -50%) scale(0.5) rotate(-5deg);
+            opacity: 0;
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1.05) rotate(2deg);
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+    }
+
+    .special-scenario-popup .scenario-icon {
+        font-size: 64px;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        animation: iconBounce 0.6s ease-in-out;
+    }
+
+    @keyframes iconBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .special-scenario-popup .scenario-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #FFF;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        margin: 10px 0;
+        letter-spacing: 2px;
+    }
+
+    .special-scenario-popup .scenario-description {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.95);
+        margin: 15px 0;
+        line-height: 1.5;
+        font-style: italic;
+    }
+
+    .special-scenario-popup .scenario-hint {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    @media (max-width: 768px) {
+        .special-scenario-popup {
+            min-width: 250px;
+            padding: 20px 25px;
+        }
+        .special-scenario-popup .scenario-icon {
+            font-size: 48px;
+        }
+        .special-scenario-popup .scenario-title {
+            font-size: 24px;
+        }
+        .special-scenario-popup .scenario-description {
+            font-size: 14px;
+        }
+    }
 </style>
 </head>
 <body>
@@ -352,6 +451,14 @@
         </div>
 
     <div id="screenshotMessage" class="screenshot-message">Screenshot saved!</div>
+
+    <!-- Special Scenario Popup -->
+    <div id="specialScenarioPopup" class="special-scenario-popup" style="display: none;">
+        <div class="scenario-icon" id="scenarioIcon"></div>
+        <div class="scenario-title" id="scenarioTitle"></div>
+        <div class="scenario-description" id="scenarioDescription"></div>
+        <div class="scenario-hint">Click anywhere to continue...</div>
+    </div>
 
     <!-- Instruction Manual -->
     <div id="instructionManual" class="instruction-manual">
@@ -22632,6 +22739,55 @@ for (let i = owls.length - 1; i >= 0; i--) {
     requestAnimationFrame(updateAndDraw);
 }
 
+// Special Scenario Popup - show and auto-fade
+function showSpecialScenarioPopup(icon, title, description) {
+    const popup = document.getElementById('specialScenarioPopup');
+    const iconEl = document.getElementById('scenarioIcon');
+    const titleEl = document.getElementById('scenarioTitle');
+    const descriptionEl = document.getElementById('scenarioDescription');
+
+    if (!popup || !iconEl || !titleEl || !descriptionEl) return;
+
+    // Set content
+    iconEl.textContent = icon;
+    titleEl.textContent = title;
+    descriptionEl.textContent = description;
+
+    // Show popup with animation
+    popup.style.display = 'block';
+
+    // Trigger animation after brief delay (needed for CSS transition)
+    setTimeout(() => {
+        popup.classList.add('show');
+    }, 50);
+
+    // Auto-fade after 10 seconds
+    const autoFadeTimer = setTimeout(() => {
+        hideSpecialScenarioPopup();
+    }, 10000);
+
+    // Click to dismiss early
+    popup.onclick = () => {
+        clearTimeout(autoFadeTimer);
+        hideSpecialScenarioPopup();
+    };
+}
+
+function hideSpecialScenarioPopup() {
+    const popup = document.getElementById('specialScenarioPopup');
+    if (!popup) return;
+
+    // Fade out
+    popup.classList.remove('show');
+    popup.classList.add('fade-out');
+
+    // Hide after animation completes
+    setTimeout(() => {
+        popup.style.display = 'none';
+        popup.classList.remove('fade-out');
+        popup.onclick = null;
+    }, 500);
+}
 
 // Add this new function for taking screenshots
 function takeScreenshot() {
@@ -22930,40 +23086,47 @@ function drawFullScene() {
             // NEW: 10% chance for special initial garden scenarios!
             const specialScenarioRoll = Math.random();
             let useSpecialScenario = false;
+            let scenarioInfo = null;
 
             if (specialScenarioRoll < 0.10) { // 10% chance
                 useSpecialScenario = true;
                 const scenarioType = Math.random();
 
-                if (scenarioType < 0.20) {
+                if (scenarioType < 0.11) {
                     // "Ancient Garden" - Single massive ancient tree
-                    debugLog('🌳 SPECIAL START: Ancient Garden - One magnificent ancient tree!');
+                    scenarioInfo = {
+                        icon: '🌳',
+                        title: 'Ancient Garden',
+                        description: 'A solitary elder tree stands watch over your garden'
+                    };
                     const x = canvas.width / 2;
                     const tree = new Tree(x, 40, 250 + Math.random() * 100, 90, true);
-                    tree.age = TREE_LIFESPAN * 0.7; // Old tree
+                    tree.age = TREE_LIFESPAN * 0.7;
                     trees.push(tree);
                     tallTreeCount++;
 
-                } else if (scenarioType < 0.40) {
+                } else if (scenarioType < 0.22) {
                     // "Baby Forest" - Many small young trees
-                    debugLog('🌱 SPECIAL START: Baby Forest - A nursery of young saplings!');
-                    const treeCount = 12 + Math.floor(Math.random() * 4); // 12-15 trees
+                    scenarioInfo = {
+                        icon: '🌱',
+                        title: 'Baby Forest',
+                        description: 'A nursery of young saplings sprouts across the land'
+                    };
+                    const treeCount = 12 + Math.floor(Math.random() * 4);
                     for (let i = 0; i < treeCount; i++) {
                         const x = 100 + Math.random() * (canvas.width - 200);
-                        const tree = new Tree(
-                            x,
-                            10 + Math.random() * 5, // Small trunks
-                            60 + Math.random() * 40, // Short trees
-                            30 + Math.random() * 15, // Small canopies
-                            Math.random() < 0.3 // Few branches
-                        );
-                        tree.age = Math.random() * (TREE_LIFESPAN * 0.1); // Very young
+                        const tree = new Tree(x, 10 + Math.random() * 5, 60 + Math.random() * 40, 30 + Math.random() * 15, Math.random() < 0.3);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.1);
                         trees.push(tree);
                     }
 
-                } else if (scenarioType < 0.60) {
+                } else if (scenarioType < 0.33) {
                     // "Twin Giants" - Two huge trees side by side
-                    debugLog('🌲🌲 SPECIAL START: Twin Giants - Two majestic trees stand together!');
+                    scenarioInfo = {
+                        icon: '🌲',
+                        title: 'Twin Giants',
+                        description: 'Two ancient sentinels stand as eternal guardians'
+                    };
                     const centerX = canvas.width / 2;
                     const spacing = 150;
                     for (let i = 0; i < 2; i++) {
@@ -22974,43 +23137,109 @@ function drawFullScene() {
                         tallTreeCount++;
                     }
 
-                } else if (scenarioType < 0.80) {
+                } else if (scenarioType < 0.44) {
                     // "Sacred Grove" - Circle of special trees
-                    debugLog('✨ SPECIAL START: Sacred Grove - A mystical circle of trees!');
-                    const treeCount = 6 + Math.floor(Math.random() * 3); // 6-8 trees
+                    scenarioInfo = {
+                        icon: '✨',
+                        title: 'Sacred Grove',
+                        description: 'A mystical circle of trees forms a natural temple'
+                    };
+                    const treeCount = 6 + Math.floor(Math.random() * 3);
                     const centerX = canvas.width / 2;
                     const radius = Math.min(300, canvas.width * 0.25);
                     for (let i = 0; i < treeCount; i++) {
                         const angle = (i / treeCount) * Math.PI * 2;
                         const x = centerX + Math.cos(angle) * radius;
                         const clampedX = Math.max(100, Math.min(canvas.width - 100, x));
-                        const tree = new Tree(
-                            clampedX,
-                            18 + Math.random() * 8,
-                            140 + Math.random() * 60,
-                            50 + Math.random() * 20,
-                            true
-                        );
+                        const tree = new Tree(clampedX, 18 + Math.random() * 8, 140 + Math.random() * 60, 50 + Math.random() * 20, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.4);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.55) {
+                    // "Orchard" - Evenly spaced row of varied trees
+                    scenarioInfo = {
+                        icon: '🍎',
+                        title: 'Orchard',
+                        description: 'A cultivated row of trees awaits careful tending'
+                    };
+                    const treeCount = 7 + Math.floor(Math.random() * 3);
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 100 + (i * (canvas.width - 200) / (treeCount - 1));
+                        const tree = new Tree(x, 16 + Math.random() * 6, 110 + Math.random() * 50, 45 + Math.random() * 15, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.35);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.66) {
+                    // "Wilderness" - Dense random forest
+                    scenarioInfo = {
+                        icon: '🌲',
+                        title: 'Wild Wilderness',
+                        description: 'Untamed nature has already claimed this space'
+                    };
+                    const treeCount = 15 + Math.floor(Math.random() * 5);
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 80 + Math.random() * (canvas.width - 160);
+                        const tree = new Tree(x, 12 + Math.random() * 12, 80 + Math.random() * 100, 35 + Math.random() * 25, Math.random() < 0.7);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.6);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.77) {
+                    // "Zen Garden" - Minimalist, few perfect trees
+                    scenarioInfo = {
+                        icon: '🎋',
+                        title: 'Zen Garden',
+                        description: 'Harmony through simplicity - three trees in perfect balance'
+                    };
+                    const spacing = canvas.width / 4;
+                    for (let i = 0; i < 3; i++) {
+                        const x = spacing + (i * spacing);
+                        const tree = new Tree(x, 20 + Math.random() * 5, 160 + Math.random() * 40, 55 + Math.random() * 15, true);
+                        tree.age = TREE_LIFESPAN * (0.3 + Math.random() * 0.3);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.88) {
+                    // "Enchanted Path" - Trees forming a natural avenue
+                    scenarioInfo = {
+                        icon: '🛤️',
+                        title: 'Enchanted Path',
+                        description: 'Trees line both sides of an invisible pathway'
+                    };
+                    const treeCount = 8 + Math.floor(Math.random() * 4);
+                    for (let i = 0; i < treeCount; i++) {
+                        const side = i % 2;
+                        const xBase = side === 0 ? canvas.width * 0.3 : canvas.width * 0.7;
+                        const x = xBase + (Math.random() - 0.5) * 100;
+                        const tree = new Tree(x, 18 + Math.random() * 8, 130 + Math.random() * 50, 50 + Math.random() * 15, true);
                         tree.age = Math.random() * (TREE_LIFESPAN * 0.4);
                         trees.push(tree);
                     }
 
                 } else {
-                    // "Orchard" - Evenly spaced row of varied trees
-                    debugLog('🍎 SPECIAL START: Orchard - A neat row of diverse trees!');
-                    const treeCount = 7 + Math.floor(Math.random() * 3); // 7-9 trees
-                    for (let i = 0; i < treeCount; i++) {
-                        const x = 100 + (i * (canvas.width - 200) / (treeCount - 1));
-                        const tree = new Tree(
-                            x,
-                            16 + Math.random() * 6,
-                            110 + Math.random() * 50,
-                            45 + Math.random() * 15,
-                            true
-                        );
-                        tree.age = Math.random() * (TREE_LIFESPAN * 0.35);
-                        trees.push(tree);
+                    // "Cluster Chaos" - Three distinct tree clusters
+                    scenarioInfo = {
+                        icon: '🌿',
+                        title: 'Cluster Chaos',
+                        description: 'Three groves compete for dominance of the garden'
+                    };
+                    for (let cluster = 0; cluster < 3; cluster++) {
+                        const clusterX = (canvas.width / 4) + (cluster * canvas.width / 3);
+                        const clusterTrees = 4 + Math.floor(Math.random() * 3);
+                        for (let i = 0; i < clusterTrees; i++) {
+                            const x = clusterX + (Math.random() - 0.5) * 150;
+                            const tree = new Tree(x, 14 + Math.random() * 8, 90 + Math.random() * 60, 40 + Math.random() * 20, Math.random() < 0.8);
+                            tree.age = Math.random() * (TREE_LIFESPAN * 0.45);
+                            trees.push(tree);
+                        }
                     }
+                }
+
+                // Show popup for special scenario
+                if (scenarioInfo) {
+                    showSpecialScenarioPopup(scenarioInfo.icon, scenarioInfo.title, scenarioInfo.description);
                 }
             }
 
