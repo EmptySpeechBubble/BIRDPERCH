@@ -10359,10 +10359,15 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                             // Bird is perched, stop all movement
                             this.velocity = { x: 0, y: 0 };
                             this.acceleration = { x: 0, y: 0 };
-                            
+
                             // Exactly position on perch point
                             this.x = this.perchTarget.x;
                             this.y = this.perchTarget.y;
+
+                            // Initialize direction cooldown if not set or negative (prevents rapid scanning)
+                            if (!this.directionChangeCooldown || this.directionChangeCooldown < 0) {
+                                this.directionChangeCooldown = 8000 + Math.random() * 12000;
+                            }
 
 
                             // Check for baby birds more frequently when perched
@@ -10387,18 +10392,26 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                             
                             // Decrease cooldown timer
                             this.directionChangeCooldown -= deltaTime;
-                            
+
                             // Only update direction when cooldown expires
                             if (this.directionChangeCooldown <= 0) {
-                                // Face the correct direction based on position in tree
+                                // Face the correct direction based on position in tree/bush
                                 if (this.perchTarget.inLeaves) {
                                     // Even less frequent direction changes in leaves
                                     this.direction = Math.random() < 0.2 ? -1 : 1; // Reduced from 0.5
-                                } else {
+                                } else if (this.perchTarget.tree) {
                                     // Face toward tree trunk on branches - no randomness
                                     this.direction = this.x < this.perchTarget.tree.x ? 1 : -1;
+                                } else if (this.perchTarget.bush) {
+                                    // On a bush - face toward bush center
+                                    this.direction = this.x < this.perchTarget.bush.x ? 1 : -1;
+                                } else {
+                                    // On clock, birdhouse, or other structure - random occasional turn
+                                    if (Math.random() < 0.3) {
+                                        this.direction *= -1;
+                                    }
                                 }
-                                
+
                                 // V26: Even longer cooldown for more stable perching
                                 this.directionChangeCooldown = 8000 + Math.random() * 12000; // Increased from 5-15 seconds
                             }
