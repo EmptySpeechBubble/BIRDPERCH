@@ -4059,11 +4059,12 @@ if (trees.length > 0 && Math.random() < 0.15) {
 
 
 
-                                // Keep wasRaining true for longer (1 minute)
+                                // IMPROVED: Keep wasRaining true for longer (3 minutes instead of 1)
+                                // This gives birds more time to finish current tasks before bathing
                                 const rainMemoryTimer = setTimeout(() => {
                                     wasRaining = false;
                                     debugLog("Birds no longer remember it rained recently");
-                                }, 60000);
+                                }, 180000); // 3 minutes (was 60000)
                                 addTimer(rainMemoryTimer);
                                 
                                 // Store interval ID in a variable first, then pass to clearInterval
@@ -10428,9 +10429,12 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                 break;
                             }
 
-                            // FIX: CHECK FOR BATHING FIRST - check both puddles and ponds:
-                            if ((puddles.length > 0 || ponds.length > 0) && Math.random() < 0.4) { // 40% chance to bathe if water exists
+                            // IMPROVED: CHECK FOR BATHING FIRST - check both puddles and ponds
+                            // Higher chance if recent rain, or if ponds exist (permanent water source)
+                            const bathingChance = wasRaining ? 0.6 : (ponds.length > 0 ? 0.3 : 0.2);
+                            if ((puddles.length > 0 || ponds.length > 0) && Math.random() < bathingChance) {
                                 this.findPuddle();
+                                debugLog(`Bird seeking water to bathe from IDLE state - chance: ${bathingChance}`);
                             }
 
                             // V26: Adjusted state preferences for more perching
@@ -11607,9 +11611,11 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                             } else if (!this.isWild && babyBirds.length > 0 && Math.random() < 0.5) { // Reduced from 0.6
                                 // Look for babies to feed
                                 this.findBabyBirds();
-                            } else if (wasRaining && puddles.length > 0 && Math.random() < 0.3) {
-                                // Go take a bath in a puddle
+                            } else if ((wasRaining && puddles.length > 0) || (ponds.length > 0 && Math.random() < 0.4)) {
+                                // FIXED: Go bathe in puddles after rain OR in ponds anytime (40% chance)
+                                // Ponds are permanent water sources - birds should use them even without recent rain
                                 this.findPuddle();
+                                debugLog(`Bird seeking water to bathe - ${wasRaining ? 'after rain' : 'at pond'}`);
                             } else {
                                 // V26: More likely to find a new perch than to fly
                                 if (Math.random() < 0.6) { // 60% chance to perch
@@ -11735,10 +11741,16 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                         // If already at water source
                         const bathingRadius = waterType === 'pond' ? 25 : 15; // Larger radius for ponds
                         if (minDist < bathingRadius) {
+                            // IMPROVED: Log when bird starts bathing (only once)
+                            if (!this.bathingStarted) {
+                                this.bathingStarted = true;
+                                debugLog(`Bird bathing in ${waterType} at (${nearestWater.x.toFixed(0)}, ${nearestWater.y.toFixed(0)})`);
+                            }
+
                             // Bathing behavior - animated fluttering
                             this.velocity.x *= 0.5;
                             this.velocity.y *= 0.5;
-                            
+
                             // Splashing motions
                             if (Math.random() < 0.2) {
                                 // FIX: Add ripple to water source (puddle or pond)
@@ -11748,6 +11760,11 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                         maxSize: 5 + Math.random() * 8,
                                         speed: 0.1 + Math.random() * 0.1
                                     });
+
+                                    // IMPROVED: Occasional log for ripple creation
+                                    if (Math.random() < 0.1) {
+                                        debugLog(`Bird creating ripples while bathing in ${waterType}`);
+                                    }
                                 }
 
                                 // Random motion
@@ -11756,13 +11773,15 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                     y: (Math.random() - 0.5) * 0.05
                                 });
                             }
-                            
+
                             // End bathing after a while
                             if (this.stateTimer > BIRD_STATE_DURATION.BATHING) {
                                 // CRITICAL: Birds ALWAYS preen after bathing (realistic behavior)
                                 this.state = BIRD_STATES.PREENING;
                                 this.stateTimer = 0;
                                 this.isOnGround = Math.abs(this.y - (canvas.height * GROUND_HEIGHT_RATIO)) < (30 * getResponsiveScale());
+                                this.bathingStarted = false; // Reset for next time
+                                debugLog(`Bird finished bathing, now preening`);
                             }
                         } else {
                             // FIX: Move toward water source (puddle or pond)
@@ -12263,6 +12282,10 @@ if (this.pathIndex >= this.path.length) {
                                 } else if (this.hunger > HUNGER_CRITICAL_THRESHOLD - 50) {
                                     // Always find food if hungry
                                     this.findFoodSource();
+                                } else if ((wasRaining || ponds.length > 0) && Math.random() < 0.15) {
+                                    // IMPROVED: 15% chance to bathe when flying (if water exists)
+                                    this.findPuddle();
+                                    debugLog(`Bird deciding to bathe from FLYING state`);
                                 } else if (!this.isWild && !this.myNest && r < 0.1) {
                                     // Find building materials (FIXED: removed twigs.length requirement)
                                     this.findTwigs();
