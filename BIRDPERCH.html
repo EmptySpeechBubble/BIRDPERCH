@@ -4008,16 +4008,35 @@ if (rainsCompleted >= 10 && ponds.length === 0 && Math.random() < 0.10) {
         color: koiColors[Math.floor(Math.random() * koiColors.length)]
     });
 
-    // Spawn a frog near the pond
-    frogs.push({
-        id: Math.random().toString(36).substr(2, 9), // Unique ID for naming
-        x: pondX + (Math.random() - 0.5) * 60,
-        y: canvas.height * GROUND_HEIGHT_RATIO,
-        jumpTimer: 0,
-        tongueOut: false
-    });
+    // IMPROVED: Spawn frogs based on pond size (bigger ponds = more frogs)
+    const pondArea = pondWidth * pondHeight;
+    const baseFrogCount = Math.max(1, Math.floor(pondArea / 5000)); // 1 frog per 5000 square units
+    const frogCount = baseFrogCount + (Math.random() < 0.5 ? 1 : 0); // +1 bonus frog 50% of time
 
-    debugLog(`Pond ecosystem spawned: 2 koi and 1 frog`);
+    for (let i = 0; i < frogCount; i++) {
+        // IMPROVED: Frog variants with different sizes and colors
+        const variants = [
+            { name: 'Green Tree Frog', color: '#4CAF50', size: 1.0 },
+            { name: 'Bull Frog', color: '#2E7D32', size: 1.3 },
+            { name: 'Poison Dart Frog', color: '#FF6B35', size: 0.7 },
+            { name: 'Golden Frog', color: '#FFD700', size: 0.8 },
+            { name: 'Blue Poison Frog', color: '#42A5F5', size: 0.75 }
+        ];
+        const variant = variants[Math.floor(Math.random() * variants.length)];
+
+        frogs.push({
+            id: Math.random().toString(36).substr(2, 9),
+            x: pondX + (Math.random() - 0.5) * pondWidth * 0.9,
+            y: canvas.height * GROUND_HEIGHT_RATIO,
+            jumpTimer: 0,
+            tongueOut: false,
+            color: variant.color, // IMPROVED: Frog color variant
+            size: variant.size, // IMPROVED: Frog size variant
+            variant: variant.name
+        });
+    }
+
+    debugLog(`Pond ecosystem spawned: 2 koi and ${frogCount} frog(s)`);
 }
 
 // Only create puddles if tab is visible
@@ -4533,29 +4552,37 @@ fish.y = pondCenterY + Math.sin(fish.swimAngle * 2) * radius * 0.4;
         // Draw frogs
         function drawFrogs() {
             frogs.forEach(frog => {
+                // IMPROVED: Use frog size and color variants
+                const frogSize = frog.size || 1.0; // Default to 1.0 if not set
+                const frogColor = frog.color || '#4CAF50'; // Default to green
+
                 // Frog body (expand slightly when croaking)
-                const bodySize = frog.croaking ? 1.2 : 1;
-                ctx.fillStyle = mushroomMode ? getMushroomColor('#4CAF50') : '#4CAF50';
+                const bodySize = (frog.croaking ? 1.2 : 1) * frogSize;
+                ctx.fillStyle = mushroomMode ? getMushroomColor(frogColor) : frogColor;
                 ctx.beginPath();
                 ctx.ellipse(frog.x, frog.y, 8 * bodySize, 6 * bodySize, 0, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Eyes
+                // Eyes (scaled with frog size)
+                const eyeOffset = 3 * frogSize;
+                const eyeY = frog.y - 4 * frogSize;
+                const eyeRadius = 3 * frogSize;
                 ctx.fillStyle = mushroomMode ? getMushroomColor('#FFD700') : '#FFD700';
                 ctx.beginPath();
-                ctx.arc(frog.x - 3, frog.y - 4, 3, 0, Math.PI * 2);
+                ctx.arc(frog.x - eyeOffset, eyeY, eyeRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(frog.x + 3, frog.y - 4, 3, 0, Math.PI * 2);
+                ctx.arc(frog.x + eyeOffset, eyeY, eyeRadius, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Pupils
+                // Pupils (scaled with frog size)
+                const pupilRadius = 1.5 * frogSize;
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(frog.x - 3, frog.y - 4, 1.5, 0, Math.PI * 2);
+                ctx.arc(frog.x - eyeOffset, eyeY, pupilRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(frog.x + 3, frog.y - 4, 1.5, 0, Math.PI * 2);
+                ctx.arc(frog.x + eyeOffset, eyeY, pupilRadius, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Croaking indicator (sound waves)
@@ -21884,8 +21911,9 @@ if (mushroomMode) {
         grass.draw();
     });
 
-    // Draw decorative stones/rocks
-    stones.forEach(stone => {
+    // IMPROVED: Draw decorative stones/rocks sorted by depth for proper layering
+    const sortedStones = [...stones].sort((a, b) => b.depth - a.depth);
+    sortedStones.forEach(stone => {
         stone.draw();
     });
 
@@ -22541,8 +22569,9 @@ function drawFullScene() {
         grass.draw();
     }
 
-    // Draw decorative stones
-    for (const stone of stones) {
+    // IMPROVED: Draw decorative stones sorted by depth for proper layering
+    const sortedStones = [...stones].sort((a, b) => b.depth - a.depth);
+    for (const stone of sortedStones) {
         stone.draw();
     }
 
@@ -22957,16 +22986,34 @@ function drawFullScene() {
                     });
                 }
 
-                // Add 1 frog to the pond
-                frogs.push({
-                    id: Math.random().toString(36).substr(2, 9), // Unique ID for naming
-                    x: pondX + (Math.random() - 0.5) * pondWidth * 0.8,
-                    y: canvas.height * GROUND_HEIGHT_RATIO,
-                    jumping: false,
-                    jumpTimer: 0,
-                    tongueOut: false,
-                    tongueTarget: null
-                });
+                // IMPROVED: Add frogs based on pond size
+                const pondArea = pondWidth * pondHeight;
+                const baseFrogCount = Math.max(1, Math.floor(pondArea / 5000));
+                const frogCount = baseFrogCount + (Math.random() < 0.5 ? 1 : 0);
+
+                for (let i = 0; i < frogCount; i++) {
+                    const variants = [
+                        { name: 'Green Tree Frog', color: '#4CAF50', size: 1.0 },
+                        { name: 'Bull Frog', color: '#2E7D32', size: 1.3 },
+                        { name: 'Poison Dart Frog', color: '#FF6B35', size: 0.7 },
+                        { name: 'Golden Frog', color: '#FFD700', size: 0.8 },
+                        { name: 'Blue Poison Frog', color: '#42A5F5', size: 0.75 }
+                    ];
+                    const variant = variants[Math.floor(Math.random() * variants.length)];
+
+                    frogs.push({
+                        id: Math.random().toString(36).substr(2, 9),
+                        x: pondX + (Math.random() - 0.5) * pondWidth * 0.8,
+                        y: canvas.height * GROUND_HEIGHT_RATIO,
+                        jumping: false,
+                        jumpTimer: 0,
+                        tongueOut: false,
+                        tongueTarget: null,
+                        color: variant.color,
+                        size: variant.size,
+                        variant: variant.name
+                    });
+                }
 
                 debugLog(`Initial pond spawned at (${pondX}, ${pondY}) with koi and frog`);
             }
@@ -23693,14 +23740,28 @@ spawnFrogBtn.addEventListener('click', () => {
     const x = 100 + Math.random() * (canvas.width - 200);
     const y = canvas.height * GROUND_HEIGHT_RATIO;
 
+    // IMPROVED: Use frog variants
+    const variants = [
+        { name: 'Green Tree Frog', color: '#4CAF50', size: 1.0 },
+        { name: 'Bull Frog', color: '#2E7D32', size: 1.3 },
+        { name: 'Poison Dart Frog', color: '#FF6B35', size: 0.7 },
+        { name: 'Golden Frog', color: '#FFD700', size: 0.8 },
+        { name: 'Blue Poison Frog', color: '#42A5F5', size: 0.75 }
+    ];
+    const variant = variants[Math.floor(Math.random() * variants.length)];
+
     frogs.push({
+        id: Math.random().toString(36).substr(2, 9),
         x: x,
         y: y,
         jumpTimer: 0,
-        tongueOut: false
+        tongueOut: false,
+        color: variant.color,
+        size: variant.size,
+        variant: variant.name
     });
 
-    debugLog(`Frog spawned at (${x}, ${y})`);
+    debugLog(`${variant.name} spawned at (${x}, ${y})`);
 });
 
 // Spawn a koi fish
