@@ -2146,7 +2146,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const BIRD_SPAWN_RATE = 300000; // Every 5 minutes, check if we need more birds
         const WILD_BIRD_SPAWN_RATE = 120000; // Wild birds come every 2 minutes
         const WILD_BIRD_SPAWN_CHANCE = 0.2; // Reduced from 0.25
-        const TREE_REGROWTH_RATE_BASE = 90000; // Base: 90 seconds (was 180000)
+        const TREE_REGROWTH_RATE_BASE = 180000; // Base: 3 minutes - balanced for 1-2 hour full ecosystem
         const GUARANTEED_TREE_CHECK_RATE = 40000; // Check for minimum tree count every 40 seconds
         const POOP_WASH_RATE = 0.2;
         const RAIN_SLOWDOWN_FACTOR = 0.6;
@@ -22380,10 +22380,10 @@ for (let i = owls.length - 1; i >= 0; i--) {
     // Dynamic tree regrowth rate based on tree count and game progression
     const treeDensity = trees.length / MAX_TREES; // 0.0 to 1.0
     const dynamicRegrowthRate = treeDensity < 0.4 ?
-        TREE_REGROWTH_RATE_BASE : // Fast growth when sparse (90 seconds)
+        TREE_REGROWTH_RATE_BASE : // Fast growth when sparse (3 minutes)
         treeDensity < 0.7 ?
-        TREE_REGROWTH_RATE_BASE * 1.5 : // Medium growth (135 seconds)
-        TREE_REGROWTH_RATE_BASE * 2; // Slow growth when dense (180 seconds)
+        TREE_REGROWTH_RATE_BASE * 1.67 : // Medium growth (5 minutes)
+        TREE_REGROWTH_RATE_BASE * 2.67; // Slow growth when dense (8 minutes)
 
     if (simulationTime % dynamicRegrowthRate < 16) {
         regrowTrees();
