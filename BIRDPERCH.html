@@ -13746,32 +13746,32 @@ class Bush {
             const rareVariants = [
                 {
                     name: 'Flowering Azalea',
-                    color: '#FF69B4', // Pink flowers
+                    color: '#B87B8D', // Pink with green tint (was #FF69B4)
                     berryBonus: true
                 },
                 {
                     name: 'Autumn Bush',
-                    color: '#FF6347', // Tomato red (fall foliage)
+                    color: '#A0623A', // Red-orange with green tint (was #FF6347)
                     berryBonus: false
                 },
                 {
                     name: 'Lavender',
-                    color: '#9370DB', // Purple
+                    color: '#7B6B8F', // Purple with green tint (was #9370DB)
                     berryBonus: false
                 },
                 {
                     name: 'Golden Barberry',
-                    color: '#DAA520', // Goldenrod
+                    color: '#9B8A42', // Gold with green tint (was #DAA520)
                     berryBonus: true
                 },
                 {
                     name: 'Blueberry Bush',
-                    color: '#4682B4', // Steel blue
+                    color: '#527B6F', // Blue-green (was #4682B4)
                     berryBonus: true
                 },
                 {
                     name: 'Burning Bush',
-                    color: '#DC143C', // Crimson
+                    color: '#8B4A42', // Crimson with green tint (was #DC143C)
                     berryBonus: false
                 }
             ];
@@ -21790,15 +21790,45 @@ if (mushroomMode) {
     }
 
     // ===== MIDDLE GROUND LAYER =====
-    // Draw trees in proper depth order (back to front)
-    drawTrees(deltaTime);
+    // FIXED: Combine trees and bushes for proper depth-based layering
+    // This prevents the illusion from breaking when bushes overlap trees at different depths
 
-    // Update and draw bushes (sorted by depth for proper layering)
-    bushes.sort((a, b) => b.depth - a.depth); // Back to front
-    bushes.forEach(bush => {
-        bush.update();
-        bush.draw();
-    });
+    // Update tree degradation first
+    for (let i = trees.length - 1; i >= 0; i--) {
+        const tree = trees[i];
+        const shouldRemove = tree.degrade(deltaTime);
+        if (shouldRemove) {
+            // Remove nests associated with this tree
+            nests = nests.filter(nest => nest.tree !== tree);
+
+            // Make birds fly away when their tree disappears
+            birds.forEach(bird => {
+                if (bird.perchTarget && bird.perchTarget.tree === tree) {
+                    bird.perchTarget = null;
+                    bird.state = BIRD_STATES.FLYING;
+                    bird.stateTimer = 0;
+                    const targetX = 100 + Math.random() * (canvas.width - 200);
+                    const targetY = 100 + Math.random() * (canvas.height * 0.3);
+                    bird.generatePath(targetX, targetY);
+                }
+            });
+
+            trees.splice(i, 1);
+        }
+    }
+
+    // Update bushes
+    bushes.forEach(bush => bush.update());
+
+    // Combine and sort vegetation by depth for proper layering
+    const vegetationItems = [
+        ...trees.map(tree => ({ type: 'tree', obj: tree, depth: tree.depth })),
+        ...bushes.map(bush => ({ type: 'bush', obj: bush, depth: bush.depth }))
+    ];
+    vegetationItems.sort((a, b) => b.depth - a.depth);
+
+    // Draw in depth order
+    vegetationItems.forEach(item => item.obj.draw());
 
     // Update and draw tall grass patches
     tallGrassPatches.forEach(grass => {
@@ -22443,16 +22473,19 @@ function drawFullScene() {
     }
 
     // ===== MIDDLE GROUND LAYER =====
-    // Draw trees in depth order
-    const sortedTrees = [...trees].sort((a, b) => b.depth - a.depth);
-    for (const tree of sortedTrees) {
-        tree.draw();
-    }
+    // FIXED: Combine trees and bushes for proper depth-based layering
+    // This prevents bushes from always appearing in front of trees regardless of depth
+    const vegetationItems = [
+        ...trees.map(tree => ({ type: 'tree', obj: tree, depth: tree.depth })),
+        ...bushes.map(bush => ({ type: 'bush', obj: bush, depth: bush.depth }))
+    ];
 
-    // Draw bushes sorted by depth for proper layering
-    const sortedBushes = [...bushes].sort((a, b) => b.depth - a.depth);
-    for (const bush of sortedBushes) {
-        bush.draw();
+    // Sort by depth (back to front) so items further back are drawn first
+    vegetationItems.sort((a, b) => b.depth - a.depth);
+
+    // Draw in depth order for correct layering
+    for (const item of vegetationItems) {
+        item.obj.draw();
     }
 
     // Draw tall grass patches
