@@ -5976,11 +5976,11 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 this.occupiedBy = null;
                 this.health = 100;
                 this.condition = 100;  // Tracks physical condition of nest (100 = perfect)
-                this.deteriorationRate = 0.005;  // Base rate of deterioration per second
+                this.deteriorationRate = 0.002;  // REDUCED: Base rate of deterioration per second (was 0.005, now 2.5x slower)
                 this.lastMaintenanceTime = Date.now(); // Track last time maintenance was performed
                 this.needsMaintenance = false; // Flag for when nest needs attention
-                this.maintenanceThreshold = 60; // Below this condition, nest needs repair
-                this.failureThreshold = 20; // Below this condition, nest becomes incomplete
+                this.maintenanceThreshold = 50; // REDUCED: Below this condition, nest needs repair (was 60, gives more buffer)
+                this.failureThreshold = 15; // REDUCED: Below this condition, nest becomes incomplete (was 20, gives more time before collapse)
                 this.ratOccupied = false; // Track if a rat has taken over
                 this.readyForBabies = false; // Explicit flag for baby creation
                 this.lastBabyTime = 0; // Track when the last baby was born
@@ -6108,13 +6108,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 
                 // Track occupancy and adjust degradation for abandoned nests
                 if (this.occupiedBy) {
-                    deteriorationAmount *= 0.5; // Halve deterioration if occupied
+                    deteriorationAmount *= 0.3; // IMPROVED: Reduce deterioration to 30% if occupied (was 50%)
                     this.lastOccupiedTime = Date.now(); // Update last occupied time
                     this.abandonedDegradationMultiplier = 1.0; // Reset multiplier
 
-                    // Occasional minor repairs when occupied
-                    if (Math.random() < 0.01 * (deltaTime / 1000)) {
-                        this.condition = Math.min(100, this.condition + 1);
+                    // IMPROVED: More frequent minor repairs when occupied
+                    if (Math.random() < 0.02 * (deltaTime / 1000)) { // 2x more likely (was 0.01)
+                        this.condition = Math.min(100, this.condition + 2); // Repair 2 points instead of 1
                         debugLog(`Bird made minor repairs to nest at (${this.x}, ${this.y})`);
                     }
                 } else {
@@ -6122,12 +6122,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     const timeSinceOccupied = Date.now() - this.lastOccupiedTime;
                     const daysAbandoned = timeSinceOccupied / (dayNightDuration * 0.5); // Game days
 
-                    // Increase degradation multiplier for long-abandoned nests
-                    if (daysAbandoned > 1) {
-                        // After 1 day: 2x degradation
-                        // After 2 days: 3x degradation
-                        // After 3+ days: 4x degradation
-                        this.abandonedDegradationMultiplier = Math.min(4, 1 + daysAbandoned);
+                    // REDUCED: Increase degradation multiplier for long-abandoned nests (was 2-4x, now 1.3-2x)
+                    // Birds may be busy with birdhouse building, so don't punish abandoned nests as harshly
+                    if (daysAbandoned > 3) {
+                        // After 3 days: 1.3x degradation
+                        // After 5 days: 1.6x degradation
+                        // After 7+ days: 2x degradation max
+                        this.abandonedDegradationMultiplier = Math.min(2, 1 + (daysAbandoned - 3) * 0.15);
                         deteriorationAmount *= this.abandonedDegradationMultiplier;
                     }
                 }
