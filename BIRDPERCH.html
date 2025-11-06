@@ -13713,38 +13713,99 @@ class Bush {
         // Width and height already scaled in constructor, Y already includes depth offset
         const drawY = this.y;
 
-        // Draw bush as rounded shape with multiple circles for leafy look
-        ctx.fillStyle = this.color;
-
         // Main bush body (3-5 overlapping circles for natural look)
         const circleCount = 3 + Math.floor(this.leafDensity * 2);
+
+        // Helper function to darken a color for shading
+        const darkenColor = (color, amount) => {
+            const hex = color.replace('#', '');
+            const r = Math.max(0, parseInt(hex.substr(0, 2), 16) - amount);
+            const g = Math.max(0, parseInt(hex.substr(2, 2), 16) - amount);
+            const b = Math.max(0, parseInt(hex.substr(4, 2), 16) - amount);
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        };
+
+        // Helper function to lighten a color for highlights
+        const lightenColor = (color, amount) => {
+            const hex = color.replace('#', '');
+            const r = Math.min(255, parseInt(hex.substr(0, 2), 16) + amount);
+            const g = Math.min(255, parseInt(hex.substr(2, 2), 16) + amount);
+            const b = Math.min(255, parseInt(hex.substr(4, 2), 16) + amount);
+            return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+        };
+
+        const darkShade = darkenColor(this.color, 40);
+        const lightShade = lightenColor(this.color, 30);
+        const outlineColor = darkenColor(this.color, 60);
+
+        // Draw each circle with shading for depth
         for (let i = 0; i < circleCount; i++) {
             const offsetX = (i - circleCount / 2) * (this.width / circleCount);
             const offsetY = Math.sin(i) * (this.height * 0.2);
-            ctx.beginPath();
-            ctx.arc(
-                this.x + offsetX,
-                drawY + offsetY,
-                this.width / (circleCount * 0.8),
-                0,
-                Math.PI * 2
+            const radius = this.width / (circleCount * 0.8);
+            const centerX = this.x + offsetX;
+            const centerY = drawY + offsetY;
+
+            // Create radial gradient for depth (darker at edges, lighter in center)
+            const gradient = ctx.createRadialGradient(
+                centerX - radius * 0.2, centerY - radius * 0.2, radius * 0.1,
+                centerX, centerY, radius
             );
+            gradient.addColorStop(0, lightShade);
+            gradient.addColorStop(0.5, this.color);
+            gradient.addColorStop(1, darkShade);
+
+            // Draw filled circle with gradient
+            ctx.fillStyle = gradient;
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Add outline for definition
+            ctx.strokeStyle = outlineColor;
+            ctx.lineWidth = 1.5 * this.scale;
+            ctx.stroke();
+        }
+
+        // Add some small detail clusters for texture
+        ctx.fillStyle = darkShade;
+        for (let i = 0; i < circleCount + 2; i++) {
+            const angle = (i / (circleCount + 2)) * Math.PI * 2;
+            const detailX = this.x + Math.cos(angle) * (this.width * 0.25);
+            const detailY = drawY + Math.sin(angle) * (this.height * 0.25);
+            ctx.beginPath();
+            ctx.arc(detailX, detailY, 2 * this.scale, 0, Math.PI * 2);
             ctx.fill();
         }
 
         // Draw berries/seeds if present
         if (this.fruitCount > 0) {
             const fruitColor = this.fruitType === 'berry' ? '#8B0000' : '#D2691E';
-            ctx.fillStyle = fruitColor;
+            const fruitHighlight = this.fruitType === 'berry' ? '#CD5C5C' : '#F4A460';
 
             for (let i = 0; i < this.fruitCount; i++) {
                 const angle = (i / this.fruitCount) * Math.PI * 2;
                 const fruitX = this.x + Math.cos(angle) * (this.width * 0.3);
                 const fruitY = drawY + Math.sin(angle) * (this.height * 0.3);
+                const fruitRadius = 3 * this.scale;
 
+                // Fruit with highlight
+                const fruitGradient = ctx.createRadialGradient(
+                    fruitX - fruitRadius * 0.3, fruitY - fruitRadius * 0.3, 0,
+                    fruitX, fruitY, fruitRadius
+                );
+                fruitGradient.addColorStop(0, fruitHighlight);
+                fruitGradient.addColorStop(1, fruitColor);
+
+                ctx.fillStyle = fruitGradient;
                 ctx.beginPath();
-                ctx.arc(fruitX, fruitY, 3 * this.scale, 0, Math.PI * 2);
+                ctx.arc(fruitX, fruitY, fruitRadius, 0, Math.PI * 2);
                 ctx.fill();
+
+                // Small outline on fruit
+                ctx.strokeStyle = darkenColor(fruitColor, 30);
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
             }
         }
 
