@@ -286,6 +286,105 @@
             font-size: 12px;
         }
     }
+
+    /* Special Scenario Popup - Roguelite style */
+    .special-scenario-popup {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, rgba(76, 175, 80, 0.95) 0%, rgba(56, 142, 60, 0.95) 100%);
+        border: 3px solid rgba(255, 215, 0, 0.9);
+        border-radius: 15px;
+        padding: 30px 40px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5),
+                    inset 0 0 30px rgba(255, 255, 255, 0.2);
+        z-index: 1000;
+        pointer-events: all;
+        cursor: pointer;
+        min-width: 300px;
+        text-align: center;
+        animation: popupEnter 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        opacity: 0;
+        transition: opacity 0.5s ease-out;
+    }
+
+    .special-scenario-popup.show {
+        opacity: 1;
+    }
+
+    .special-scenario-popup.fade-out {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.95);
+        transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+    }
+
+    @keyframes popupEnter {
+        0% {
+            transform: translate(-50%, -50%) scale(0.5) rotate(-5deg);
+            opacity: 0;
+        }
+        50% {
+            transform: translate(-50%, -50%) scale(1.05) rotate(2deg);
+        }
+        100% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+    }
+
+    .special-scenario-popup .scenario-icon {
+        font-size: 64px;
+        margin-bottom: 10px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        animation: iconBounce 0.6s ease-in-out;
+    }
+
+    @keyframes iconBounce {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    .special-scenario-popup .scenario-title {
+        font-size: 32px;
+        font-weight: bold;
+        color: #FFF;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        margin: 10px 0;
+        letter-spacing: 2px;
+    }
+
+    .special-scenario-popup .scenario-description {
+        font-size: 16px;
+        color: rgba(255, 255, 255, 0.95);
+        margin: 15px 0;
+        line-height: 1.5;
+        font-style: italic;
+    }
+
+    .special-scenario-popup .scenario-hint {
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.7);
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    @media (max-width: 768px) {
+        .special-scenario-popup {
+            min-width: 250px;
+            padding: 20px 25px;
+        }
+        .special-scenario-popup .scenario-icon {
+            font-size: 48px;
+        }
+        .special-scenario-popup .scenario-title {
+            font-size: 24px;
+        }
+        .special-scenario-popup .scenario-description {
+            font-size: 14px;
+        }
+    }
 </style>
 </head>
 <body>
@@ -353,6 +452,14 @@
 
     <div id="screenshotMessage" class="screenshot-message">Screenshot saved!</div>
 
+    <!-- Special Scenario Popup -->
+    <div id="specialScenarioPopup" class="special-scenario-popup" style="display: none;">
+        <div class="scenario-icon" id="scenarioIcon"></div>
+        <div class="scenario-title" id="scenarioTitle"></div>
+        <div class="scenario-description" id="scenarioDescription"></div>
+        <div class="scenario-hint">Click anywhere to continue...</div>
+    </div>
+
     <!-- Instruction Manual -->
     <div id="instructionManual" class="instruction-manual">
         <button class="close-btn" id="closeManualBtn">×</button>
@@ -413,8 +520,24 @@
         <details class="detail-section">
             <summary>🌳 Trees & Environment</summary>
             <ul>
-                <li><strong>Tree lifecycle:</strong> Trees age, produce flowers, and eventually fall. New trees regrow</li>
-                <li><strong>Rare tall trees:</strong> 2% of trees spawn as majestic tall variants - 33% taller with thicker trunks and more branches for extra perching spots</li>
+                <li><strong>Tree lifecycle:</strong> Trees live for 6.5 in-game days (~26 min), age gracefully, produce flowers, and eventually fall. New trees regrow dynamically</li>
+                <li><strong>Dynamic spawning:</strong> Trees spawn faster when sparse (every 3 min), slower when dense (every 8 min). Full ecosystem takes 1-2 hours</li>
+                <li><strong>Spawn variety:</strong> Trees can spawn as singles (58%), pairs (25%), clusters (5%), or rare "Forest Bloom" events (2%) with 5-7 trees at once!</li>
+                <li><strong>Special tree types:</strong> 15% chance for rare variants (Birch, Cherry, Willow, Oak, Pine, Maple, Aspen) with unique colors. Time of day affects which types spawn!</li>
+                <li><strong>Rare tall trees:</strong> 2% spawn as majestic tall variants - 33% taller with thicker trunks and more branches for extra perching spots</li>
+                <li><strong>Special Starting Scenarios (10% chance):</strong>
+                    <ul>
+                        <li>🌳 <strong>Ancient Garden</strong> - One magnificent elder tree</li>
+                        <li>🌱 <strong>Baby Forest</strong> - 12-15 young saplings</li>
+                        <li>🌲 <strong>Twin Giants</strong> - Two ancient guardians</li>
+                        <li>✨ <strong>Sacred Grove</strong> - 6-8 trees in mystical circle</li>
+                        <li>🍎 <strong>Orchard</strong> - 7-9 trees in neat row</li>
+                        <li>🌲 <strong>Wild Wilderness</strong> - 15-19 dense trees</li>
+                        <li>🎋 <strong>Zen Garden</strong> - 3 perfect trees in balance</li>
+                        <li>🛤️ <strong>Enchanted Path</strong> - 8-11 trees forming avenue</li>
+                        <li>🌿 <strong>Cluster Chaos</strong> - 3 competing groves</li>
+                    </ul>
+                </li>
                 <li><strong>Perching positions:</strong> Each tree offers 25 perching spots throughout its canopy, including all through the leafy areas</li>
                 <li><strong>Perching preferences:</strong> Birds prefer shelter during rain/night, healthy trees during day</li>
                 <li><strong>Branch traversal:</strong> Squirrels can jump between nearby trees</li>
@@ -481,20 +604,23 @@
             <summary>📖 Garden Diary</summary>
             <ul>
                 <li><strong>Auto-Generated Story:</strong> Click the 📖 button in info panel to view your garden's history</li>
-                <li><strong>Event Chronicle:</strong> Major moments automatically recorded (births, nests, weather, visitors)</li>
+                <li><strong>Event Chronicle:</strong> Major moments automatically recorded (births, nests, weather, visitors, special scenarios)</li>
+                <li><strong>Special Scenario Tracking:</strong> If your garden starts with a special scenario, it's automatically recorded in the diary with full description</li>
                 <li><strong>Bird Lineages:</strong> Birds receive names and track family generations (Ruby → Ruby Jr. → Ruby III)</li>
                 <li><strong>Timeline View:</strong> See your garden's story unfold day by day</li>
                 <li><strong>Family Trees:</strong> Watch bird families grow across generations</li>
-                <li><strong>Milestone Tracking:</strong> First nest, pond formation, special events recorded</li>
+                <li><strong>Milestone Tracking:</strong> First nest, pond formation, rare birds, and special events recorded</li>
             </ul>
         </details>
 
         <details class="detail-section">
             <summary>🎮 Special Features & Easter Eggs</summary>
             <ul>
+                <li><strong>Special Starting Scenarios:</strong> 10% chance to start with a unique garden setup! A roguelite-style popup announces your scenario (Ancient Garden, Baby Forest, Twin Giants, etc). Auto-fades after 10 seconds or click to dismiss. Recorded in diary!</li>
                 <li><strong>Real-Time Clock & Forecast:</strong> Toggle in info panel for a large transparent 24-hour clock with weather forecast. Birds perch on numbers! Clock chimes hourly with different melodies.</li>
                 <li><strong>Gameboy:</strong> After day 30, an owl may deliver a magical gameboy. Click it to visit a 1-bit window game!</li>
                 <li><strong>Mushroom Mode:</strong> Psychedelic visual mode with rainbow colors and bird trails. Find the magic mushroom to unlock!</li>
+                <li><strong>Wind Chimes:</strong> 10% chance to spawn hanging from trees. Make soothing sounds when birds perch nearby. Owl delivers replacement if tree falls (after 15 days).</li>
                 <li><strong>Scarecrow:</strong> Birds avoid scarecrows. Stays for 1 day/night cycle</li>
                 <li><strong>Butterflies:</strong> Flutter peacefully through the garden near flowers</li>
                 <li><strong>Screenshots:</strong> Capture special moments with the 📷 button</li>
@@ -2120,8 +2246,9 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const BIRD_HUNGER_RATE = 0.006; // Further reduced from 0.02 to encourage less food hunting
         const HUNGER_CRITICAL_THRESHOLD = 300;
         const BIRD_POOP_DELAY = 360000; // 6 minutes between poops
-        const TREE_DEGRADATION_RATE = 0.25;
+        const TREE_DEGRADATION_RATE = 0.15; // Reduced from 0.25 for longer tree life
         const TREE_HEALTH_THRESHOLD = 0;
+        const MAX_TREE_DELTA_TIME = 33; // Cap deltaTime at 33ms (30 FPS) for consistent degradation across all computers
         const BIRD_VISION_RADIUS = 400; // Base value - scaled by getResponsiveScale()
         const BIRD_FOOD_VISION_RADIUS = 800; // Base value - scaled by getResponsiveScale()
         const RAT_VISION_RADIUS = 80;
@@ -2145,7 +2272,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const BIRD_SPAWN_RATE = 300000; // Every 5 minutes, check if we need more birds
         const WILD_BIRD_SPAWN_RATE = 120000; // Wild birds come every 2 minutes
         const WILD_BIRD_SPAWN_CHANCE = 0.2; // Reduced from 0.25
-        const TREE_REGROWTH_RATE = 180000; // Every 2 minutes
+        const TREE_REGROWTH_RATE_BASE = 180000; // Base: 3 minutes - balanced for 1-2 hour full ecosystem
         const GUARANTEED_TREE_CHECK_RATE = 40000; // Check for minimum tree count every 40 seconds
         const POOP_WASH_RATE = 0.2;
         const RAIN_SLOWDOWN_FACTOR = 0.6;
@@ -2154,7 +2281,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const AIR_RESISTANCE = 0.98;
         const MAX_TREES = 25;
         const MIN_TREES = 3;
-        const TREE_LIFESPAN = 1200000; // 20 minutes
+        const TREE_LIFESPAN = 1560000; // 26 minutes = 6.5 in-game days (was 20 min = 5 days)
         const BRANCH_GROWTH_INTERVAL = 540000; // 9 minutes
         const LIGHTNING_CHANCE = 0.3; // 30% chance of lightning during rain
         const LIGHTNING_TREE_DAMAGE = 70; // Damage to tree from lightning
@@ -7802,7 +7929,7 @@ function drawWorms() {
                 this.leafColorNight = '#1A6B1A'; // Default dark green
 
                 const variantRoll = Math.random();
-                if (variantRoll < 0.10) { // 10% total chance for special trees
+                if (variantRoll < 0.15) { // 15% total chance for special trees (increased from 10%)
                     const variants = [
                         {
                             name: 'Birch',
@@ -7811,6 +7938,7 @@ function drawWorms() {
                             leafColorNight: '#6B8E6B',
                             trunkMod: 0.9, // Slightly thinner
                             heightMod: 1.1, // Slightly taller
+                            preferredTime: 'morning', // More common in morning
                         },
                         {
                             name: 'Cherry',
@@ -7818,6 +7946,7 @@ function drawWorms() {
                             leafColor: '#FFB7C5', // Pink blossoms
                             leafColorNight: '#CC8FA3',
                             leafMod: 1.15, // Fuller canopy
+                            preferredTime: 'morning', // Beautiful in morning light
                         },
                         {
                             name: 'Willow',
@@ -7826,6 +7955,7 @@ function drawWorms() {
                             leafColorNight: '#7A9E2A',
                             heightMod: 1.25, // Taller
                             trunkMod: 0.85, // Thinner
+                            preferredTime: 'day', // Graceful in daylight
                         },
                         {
                             name: 'Oak',
@@ -7834,6 +7964,7 @@ function drawWorms() {
                             leafColorNight: '#1A6B1A',
                             trunkMod: 1.25, // Thicker trunk
                             widthMod: 1.2, // Wider canopy
+                            preferredTime: 'day', // Strong presence in full sun
                         },
                         {
                             name: 'Pine',
@@ -7842,6 +7973,7 @@ function drawWorms() {
                             leafColorNight: '#012818',
                             leafMod: 0.85, // Narrower
                             heightMod: 1.2, // Taller
+                            preferredTime: 'evening', // Mysterious at dusk
                         },
                         {
                             name: 'Maple',
@@ -7849,6 +7981,7 @@ function drawWorms() {
                             leafColor: '#DC143C', // Crimson (fall colors)
                             leafColorNight: '#B01030',
                             leafMod: 1.1, // Fuller
+                            preferredTime: 'evening', // Crimson glow at sunset
                         },
                         {
                             name: 'Aspen',
@@ -7857,10 +7990,33 @@ function drawWorms() {
                             leafColorNight: '#CCA000',
                             heightMod: 1.15,
                             trunkMod: 0.8, // Thin trunk
+                            preferredTime: 'any', // Golden beauty anytime
                         }
                     ];
 
-                    this.treeVariant = variants[Math.floor(Math.random() * variants.length)];
+                    // Time-based variant weighting for more variety
+                    const currentTime = timeOfDay < 1 ? 'day' : 'night';
+                    const currentHourOfDay = Math.floor(timeOfDay * 12); // 0-11 for day, 12-23 for night
+                    let timeCategory;
+
+                    if (currentTime === 'day') {
+                        if (currentHourOfDay < 3) timeCategory = 'morning'; // 6am-9am
+                        else if (currentHourOfDay < 9) timeCategory = 'day'; // 9am-3pm
+                        else timeCategory = 'evening'; // 3pm-6pm
+                    } else {
+                        timeCategory = 'night';
+                    }
+
+                    // Filter variants that match current time or are "any time"
+                    const preferredVariants = variants.filter(v =>
+                        v.preferredTime === timeCategory || v.preferredTime === 'any'
+                    );
+
+                    // 70% chance to use preferred variants, 30% chance any variant
+                    const usePreferred = Math.random() < 0.7 && preferredVariants.length > 0;
+                    const variantPool = usePreferred ? preferredVariants : variants;
+
+                    this.treeVariant = variantPool[Math.floor(Math.random() * variantPool.length)];
                     this.barkColor = this.treeVariant.barkColor;
                     this.leafColor = this.treeVariant.leafColor;
                     this.leafColorNight = this.treeVariant.leafColorNight;
@@ -8059,8 +8215,11 @@ function drawWorms() {
             }
 
             degrade(deltaTime) {
+                // Cap deltaTime to prevent performance-based degradation on slower computers
+                const cappedDeltaTime = Math.min(deltaTime, MAX_TREE_DELTA_TIME);
+
                 // Increment age with slight randomness
-                this.age += deltaTime * (0.4 + Math.random() * 0.1);
+                this.age += cappedDeltaTime * (0.4 + Math.random() * 0.1);
 
                 // Trees with nests, eggs, or baby birds are much more resistant
                 const hasNest = this.nest !== null;
@@ -8081,7 +8240,7 @@ function drawWorms() {
                 // Trees degrade with age and can recover with rain
                 if (timeOfDay >= 1 && !isRaining) {
                     // Faster degradation at night without rain
-                    this.health -= TREE_DEGRADATION_RATE * degradationMultiplier * lifespanFactor * (deltaTime / 1000);
+                    this.health -= TREE_DEGRADATION_RATE * degradationMultiplier * lifespanFactor * (cappedDeltaTime / 1000);
                 } else if (isRaining && timeOfDay < 1) {
 
 
@@ -8089,7 +8248,7 @@ function drawWorms() {
                 } else if (isRaining && timeOfDay < 1) {
     // Trees recover during rain in daytime - extra recovery for trees with eggs/babies
     const recoveryRate = hasEggsOrBabies ? 0.04 : (hasNest ? 0.025 : 0.0125);
-    this.health = Math.min(100, this.health + recoveryRate * (deltaTime / 1000));
+    this.health = Math.min(100, this.health + recoveryRate * (cappedDeltaTime / 1000));
 } else if (timeOfDay < 1) {
 
 
@@ -8098,7 +8257,7 @@ function drawWorms() {
 } else if (timeOfDay < 1) {
     // Trees gain a small health boost during the day, more if they have nests/eggs/babies
     const sunRecoveryRate = hasEggsOrBabies ? 0.0125 : (hasNest ? 0.00625 : 0.003);
-    this.health = Math.min(100, this.health + sunRecoveryRate * (deltaTime / 1000));
+    this.health = Math.min(100, this.health + sunRecoveryRate * (cappedDeltaTime / 1000));
 }
 
 
@@ -8338,59 +8497,113 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 }
             }
             
-            // Stagger new tree growth
-            if (trees.length < MAX_TREES && Math.random() < 0.7) { // 70% chance to actually grow a tree
-                let validPosition = false;
-                let attempts = 0;
+            // NEW: Varied tree spawning events for more interesting scenarios
+            if (trees.length < MAX_TREES) {
+                // Determine spawn event type with weighted probabilities
+                const spawnRoll = Math.random();
+                let spawnEvent, treesToSpawn;
 
-                while (!validPosition && attempts < 50) {
-                    attempts++;
-                    const trunkHeight = Math.random() < 0.1 && tallTreeCount < 3 ?
-                        150 + Math.random() * 50 :
-                        80 + Math.random() * 70;
+                if (spawnRoll < 0.02) {
+                    // 2% chance: "Forest Bloom" - rare magical event!
+                    spawnEvent = 'forest_bloom';
+                    treesToSpawn = Math.min(5 + Math.floor(Math.random() * 3), MAX_TREES - trees.length); // 5-7 trees
+                    debugLog(`🌸 FOREST BLOOM EVENT! ${treesToSpawn} magical trees sprouting!`);
+                } else if (spawnRoll < 0.07) {
+                    // 5% chance: Cluster of trees
+                    spawnEvent = 'cluster';
+                    treesToSpawn = Math.min(3 + Math.floor(Math.random() * 2), MAX_TREES - trees.length); // 3-4 trees
+                    debugLog(`🌳 Tree cluster forming (${treesToSpawn} trees)`);
+                } else if (spawnRoll < 0.32) {
+                    // 25% chance: Pair of trees
+                    spawnEvent = 'pair';
+                    treesToSpawn = Math.min(2, MAX_TREES - trees.length);
+                } else if (spawnRoll < 0.90) {
+                    // 58% chance: Single tree
+                    spawnEvent = 'single';
+                    treesToSpawn = 1;
+                } else {
+                    // 10% chance: No spawn this cycle
+                    return;
+                }
 
-                    // Better positioning to avoid edges and spread trees more naturally
-                    const margin = 100; 
-                    const x = margin + Math.random() * (canvas.width - margin * 2);
-                    const hasBranches = Math.random() < 0.8; // More trees have branches
+                // Spawn trees based on event type
+                for (let t = 0; t < treesToSpawn; t++) {
+                    let validPosition = false;
+                    let attempts = 0;
 
-                    // Check if position is valid (not too close to other trees)
-                    validPosition = trees.every(tree =>
-                        Math.abs(tree.x - x) > 100
-                    );
+                    while (!validPosition && attempts < 50) {
+                        attempts++;
 
-                    if (validPosition) {
-                        // Occasionally grow much taller trees
-                        const extraTall = Math.random() < 0.25; // 25% chance for extra tall tree
-                        
-                        if (trunkHeight > 150 || extraTall) tallTreeCount++;
-                        
-                        // Allow for taller trees overall
-                        const finalTrunkHeight = extraTall ? 
-                        200 + Math.random() * 100 : // Even taller trees: 200-300px
-                        trunkHeight;                // Normal trees
-                        
-                        // Thicker trunks for taller trees
-                        const trunkWidth = extraTall ?
-                            20 + Math.random() * 15 :  // Thicker trunks for tall trees
-                            15 + Math.random() * 10;   // Normal trunks
+                        // Determine tree position based on event type
+                        let x;
+                        const margin = 100;
 
-                        // Larger leaf radius for taller trees
-                        const leafRadius = extraTall ?
-                            60 + Math.random() * 30 :  // Larger leaf clusters for tall trees
-                            40 + Math.random() * 20;   // Normal leaf clusters
-                        
-                        const newTree = new Tree(
-                            x, 
-                            trunkWidth, 
-                            finalTrunkHeight, 
-                            leafRadius, 
-                            hasBranches
-                        );
-                        // Stagger tree ages
-                        newTree.age = Math.random() * (TREE_LIFESPAN * 0.5);
-                        trees.push(newTree);
-                        debugLog(`New tree grown at (${x}). Height: ${finalTrunkHeight}`);
+                        if (spawnEvent === 'forest_bloom') {
+                            // Spread across entire canvas for bloom events
+                            x = margin + Math.random() * (canvas.width - margin * 2);
+                        } else if (spawnEvent === 'cluster' || spawnEvent === 'pair') {
+                            // Cluster trees closer together
+                            if (t === 0) {
+                                // First tree in cluster - random position
+                                x = margin + Math.random() * (canvas.width - margin * 2);
+                            } else {
+                                // Subsequent trees - near previous tree
+                                const prevTree = trees[trees.length - 1];
+                                x = prevTree.x + (Math.random() - 0.5) * 200; // Within 100px
+                            }
+                        } else {
+                            // Single tree - random position
+                            x = margin + Math.random() * (canvas.width - margin * 2);
+                        }
+
+                        // Clamp to screen bounds
+                        x = Math.max(margin, Math.min(canvas.width - margin, x));
+
+                        // Check if position is valid (not too close to existing trees)
+                        const minDistance = (spawnEvent === 'cluster' || spawnEvent === 'pair') ? 80 : 100;
+                        validPosition = trees.every(tree => Math.abs(tree.x - x) > minDistance);
+
+                        if (validPosition) {
+                            // Determine tree characteristics based on event
+                            let extraTall, trunkHeight, trunkWidth, leafRadius, hasBranches;
+
+                            if (spawnEvent === 'forest_bloom') {
+                                // Bloom events: more special trees!
+                                extraTall = Math.random() < 0.4; // 40% tall trees
+                                trunkHeight = extraTall ?
+                                    180 + Math.random() * 100 :
+                                    100 + Math.random() * 60;
+                                hasBranches = true; // All bloom trees have branches
+                            } else {
+                                // Normal spawning
+                                extraTall = Math.random() < 0.25; // 25% tall trees
+                                trunkHeight = extraTall ?
+                                    200 + Math.random() * 100 :
+                                    80 + Math.random() * 70;
+                                hasBranches = Math.random() < 0.8;
+                            }
+
+                            if (extraTall) tallTreeCount++;
+
+                            trunkWidth = extraTall ?
+                                20 + Math.random() * 15 :
+                                15 + Math.random() * 10;
+
+                            leafRadius = extraTall ?
+                                60 + Math.random() * 30 :
+                                40 + Math.random() * 20;
+
+                            const newTree = new Tree(x, trunkWidth, trunkHeight, leafRadius, hasBranches);
+                            newTree.age = Math.random() * (TREE_LIFESPAN * 0.5);
+
+                            // Forest bloom trees start younger for longer life
+                            if (spawnEvent === 'forest_bloom') {
+                                newTree.age = Math.random() * (TREE_LIFESPAN * 0.3);
+                            }
+
+                            trees.push(newTree);
+                            debugLog(`New ${spawnEvent} tree grown at (${x}). Height: ${trunkHeight.toFixed(0)}`);
+                        }
                     }
                 }
             }
@@ -22290,7 +22503,15 @@ for (let i = owls.length - 1; i >= 0; i--) {
         spawnButterflies();
     }
 
-    if (simulationTime % TREE_REGROWTH_RATE < 16) {
+    // Dynamic tree regrowth rate based on tree count and game progression
+    const treeDensity = trees.length / MAX_TREES; // 0.0 to 1.0
+    const dynamicRegrowthRate = treeDensity < 0.4 ?
+        TREE_REGROWTH_RATE_BASE : // Fast growth when sparse (3 minutes)
+        treeDensity < 0.7 ?
+        TREE_REGROWTH_RATE_BASE * 1.67 : // Medium growth (5 minutes)
+        TREE_REGROWTH_RATE_BASE * 2.67; // Slow growth when dense (8 minutes)
+
+    if (simulationTime % dynamicRegrowthRate < 16) {
         regrowTrees();
     }
 
@@ -22537,6 +22758,55 @@ for (let i = owls.length - 1; i >= 0; i--) {
     requestAnimationFrame(updateAndDraw);
 }
 
+// Special Scenario Popup - show and auto-fade
+function showSpecialScenarioPopup(icon, title, description) {
+    const popup = document.getElementById('specialScenarioPopup');
+    const iconEl = document.getElementById('scenarioIcon');
+    const titleEl = document.getElementById('scenarioTitle');
+    const descriptionEl = document.getElementById('scenarioDescription');
+
+    if (!popup || !iconEl || !titleEl || !descriptionEl) return;
+
+    // Set content
+    iconEl.textContent = icon;
+    titleEl.textContent = title;
+    descriptionEl.textContent = description;
+
+    // Show popup with animation
+    popup.style.display = 'block';
+
+    // Trigger animation after brief delay (needed for CSS transition)
+    setTimeout(() => {
+        popup.classList.add('show');
+    }, 50);
+
+    // Auto-fade after 10 seconds
+    const autoFadeTimer = setTimeout(() => {
+        hideSpecialScenarioPopup();
+    }, 10000);
+
+    // Click to dismiss early
+    popup.onclick = () => {
+        clearTimeout(autoFadeTimer);
+        hideSpecialScenarioPopup();
+    };
+}
+
+function hideSpecialScenarioPopup() {
+    const popup = document.getElementById('specialScenarioPopup');
+    if (!popup) return;
+
+    // Fade out
+    popup.classList.remove('show');
+    popup.classList.add('fade-out');
+
+    // Hide after animation completes
+    setTimeout(() => {
+        popup.style.display = 'none';
+        popup.classList.remove('fade-out');
+        popup.onclick = null;
+    }, 500);
+}
 
 // Add this new function for taking screenshots
 function takeScreenshot() {
@@ -22831,16 +23101,178 @@ function drawFullScene() {
         // Start animation
         function startAnimation() {
             if (animationRunning) return;
-            
-            // IMPROVED: Create initial trees with better clustering and responsive count
-            // Scale tree count based on screen width (more trees on wider screens)
-            const baseTreeCount = 5 + Math.floor(Math.random() * 3);
-            const widthFactor = canvas.width / 1920; // 1920px baseline, NO Math.max to allow mobile reduction
-            const initialTreeCount = Math.max(3, Math.floor(baseTreeCount * widthFactor)); // At least 3 trees
 
-            // Create tree clusters for more natural distribution with MORE VARIETY
-            const clusterCount = Math.floor(initialTreeCount / 2.5); // 2-3 trees per cluster
-            const clusters = [];
+            // NEW: 10% chance for special initial garden scenarios!
+            const specialScenarioRoll = Math.random();
+            let useSpecialScenario = false;
+            let scenarioInfo = null;
+
+            if (specialScenarioRoll < 0.10) { // 10% chance
+                useSpecialScenario = true;
+                const scenarioType = Math.random();
+
+                if (scenarioType < 0.11) {
+                    // "Ancient Garden" - Single massive ancient tree
+                    scenarioInfo = {
+                        icon: '🌳',
+                        title: 'Ancient Garden',
+                        description: 'A solitary elder tree stands watch over your garden'
+                    };
+                    const x = canvas.width / 2;
+                    const tree = new Tree(x, 40, 250 + Math.random() * 100, 90, true);
+                    tree.age = TREE_LIFESPAN * 0.7;
+                    trees.push(tree);
+                    tallTreeCount++;
+
+                } else if (scenarioType < 0.22) {
+                    // "Baby Forest" - Many small young trees
+                    scenarioInfo = {
+                        icon: '🌱',
+                        title: 'Baby Forest',
+                        description: 'A nursery of young saplings sprouts across the land'
+                    };
+                    const treeCount = 12 + Math.floor(Math.random() * 4);
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 100 + Math.random() * (canvas.width - 200);
+                        const tree = new Tree(x, 10 + Math.random() * 5, 60 + Math.random() * 40, 30 + Math.random() * 15, Math.random() < 0.3);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.1);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.33) {
+                    // "Twin Giants" - Two huge trees side by side
+                    scenarioInfo = {
+                        icon: '🌲',
+                        title: 'Twin Giants',
+                        description: 'Two ancient sentinels stand as eternal guardians'
+                    };
+                    const centerX = canvas.width / 2;
+                    const spacing = 150;
+                    for (let i = 0; i < 2; i++) {
+                        const x = centerX + (i === 0 ? -spacing : spacing);
+                        const tree = new Tree(x, 35 + Math.random() * 10, 220 + Math.random() * 80, 80, true);
+                        tree.age = TREE_LIFESPAN * 0.5;
+                        trees.push(tree);
+                        tallTreeCount++;
+                    }
+
+                } else if (scenarioType < 0.44) {
+                    // "Sacred Grove" - Circle of special trees
+                    scenarioInfo = {
+                        icon: '✨',
+                        title: 'Sacred Grove',
+                        description: 'A mystical circle of trees forms a natural temple'
+                    };
+                    const treeCount = 6 + Math.floor(Math.random() * 3);
+                    const centerX = canvas.width / 2;
+                    const radius = Math.min(300, canvas.width * 0.25);
+                    for (let i = 0; i < treeCount; i++) {
+                        const angle = (i / treeCount) * Math.PI * 2;
+                        const x = centerX + Math.cos(angle) * radius;
+                        const clampedX = Math.max(100, Math.min(canvas.width - 100, x));
+                        const tree = new Tree(clampedX, 18 + Math.random() * 8, 140 + Math.random() * 60, 50 + Math.random() * 20, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.4);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.55) {
+                    // "Orchard" - Evenly spaced row of varied trees
+                    scenarioInfo = {
+                        icon: '🍎',
+                        title: 'Orchard',
+                        description: 'A cultivated row of trees awaits careful tending'
+                    };
+                    const treeCount = 7 + Math.floor(Math.random() * 3);
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 100 + (i * (canvas.width - 200) / (treeCount - 1));
+                        const tree = new Tree(x, 16 + Math.random() * 6, 110 + Math.random() * 50, 45 + Math.random() * 15, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.35);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.66) {
+                    // "Wilderness" - Dense random forest
+                    scenarioInfo = {
+                        icon: '🌲',
+                        title: 'Wild Wilderness',
+                        description: 'Untamed nature has already claimed this space'
+                    };
+                    const treeCount = 15 + Math.floor(Math.random() * 5);
+                    for (let i = 0; i < treeCount; i++) {
+                        const x = 80 + Math.random() * (canvas.width - 160);
+                        const tree = new Tree(x, 12 + Math.random() * 12, 80 + Math.random() * 100, 35 + Math.random() * 25, Math.random() < 0.7);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.6);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.77) {
+                    // "Zen Garden" - Minimalist, few perfect trees
+                    scenarioInfo = {
+                        icon: '🎋',
+                        title: 'Zen Garden',
+                        description: 'Harmony through simplicity - three trees in perfect balance'
+                    };
+                    const spacing = canvas.width / 4;
+                    for (let i = 0; i < 3; i++) {
+                        const x = spacing + (i * spacing);
+                        const tree = new Tree(x, 20 + Math.random() * 5, 160 + Math.random() * 40, 55 + Math.random() * 15, true);
+                        tree.age = TREE_LIFESPAN * (0.3 + Math.random() * 0.3);
+                        trees.push(tree);
+                    }
+
+                } else if (scenarioType < 0.88) {
+                    // "Enchanted Path" - Trees forming a natural avenue
+                    scenarioInfo = {
+                        icon: '🛤️',
+                        title: 'Enchanted Path',
+                        description: 'Trees line both sides of an invisible pathway'
+                    };
+                    const treeCount = 8 + Math.floor(Math.random() * 4);
+                    for (let i = 0; i < treeCount; i++) {
+                        const side = i % 2;
+                        const xBase = side === 0 ? canvas.width * 0.3 : canvas.width * 0.7;
+                        const x = xBase + (Math.random() - 0.5) * 100;
+                        const tree = new Tree(x, 18 + Math.random() * 8, 130 + Math.random() * 50, 50 + Math.random() * 15, true);
+                        tree.age = Math.random() * (TREE_LIFESPAN * 0.4);
+                        trees.push(tree);
+                    }
+
+                } else {
+                    // "Cluster Chaos" - Three distinct tree clusters
+                    scenarioInfo = {
+                        icon: '🌿',
+                        title: 'Cluster Chaos',
+                        description: 'Three groves compete for dominance of the garden'
+                    };
+                    for (let cluster = 0; cluster < 3; cluster++) {
+                        const clusterX = (canvas.width / 4) + (cluster * canvas.width / 3);
+                        const clusterTrees = 4 + Math.floor(Math.random() * 3);
+                        for (let i = 0; i < clusterTrees; i++) {
+                            const x = clusterX + (Math.random() - 0.5) * 150;
+                            const tree = new Tree(x, 14 + Math.random() * 8, 90 + Math.random() * 60, 40 + Math.random() * 20, Math.random() < 0.8);
+                            tree.age = Math.random() * (TREE_LIFESPAN * 0.45);
+                            trees.push(tree);
+                        }
+                    }
+                }
+
+                // Show popup and add diary entry for special scenario
+                if (scenarioInfo) {
+                    showSpecialScenarioPopup(scenarioInfo.icon, scenarioInfo.title, scenarioInfo.description);
+                    addDiaryEntry(`${scenarioInfo.icon} ${scenarioInfo.title}: ${scenarioInfo.description}`, 'special');
+                }
+            }
+
+            // NORMAL START: Create initial trees with better clustering and responsive count
+            if (!useSpecialScenario) {
+                // Scale tree count based on screen width (more trees on wider screens)
+                const baseTreeCount = 5 + Math.floor(Math.random() * 3);
+                const widthFactor = canvas.width / 1920; // 1920px baseline, NO Math.max to allow mobile reduction
+                const initialTreeCount = Math.max(3, Math.floor(baseTreeCount * widthFactor)); // At least 3 trees
+
+                // Create tree clusters for more natural distribution with MORE VARIETY
+                const clusterCount = Math.floor(initialTreeCount / 2.5); // 2-3 trees per cluster
+                const clusters = [];
 
             for (let c = 0; c < clusterCount; c++) {
                 // MOBILE FIX: Scale random spread based on screen width to prevent overlap
@@ -22918,6 +23350,7 @@ function drawFullScene() {
                     ));
                 }
             }
+            } // End if (!useSpecialScenario)
 
             // Add initial bushes with depth variation (distributed across entire grass area depth)
             const bushCount = 5 + Math.floor(Math.random() * 4); // 5-8 bushes for better coverage
