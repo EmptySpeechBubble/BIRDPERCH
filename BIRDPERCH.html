@@ -13615,8 +13615,8 @@ ctx.stroke();
 class Bush {
     constructor(x, depth) {
         this.x = x;
-        this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground, 1 = background)
-        this.scale = 1 - this.depth * 0.3; // Scale based on depth (0.7x to 1.0x)
+        this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground/bottom, 1 = background/top)
+        this.scale = 1 - this.depth * 0.5; // Scale based on depth (0.5x to 1.0x) - increased variance for better perspective
 
         // Size variants: 15% chance for larger bushes
         this.isLarge = Math.random() < 0.15;
@@ -13625,8 +13625,10 @@ class Bush {
         this.width = (40 + Math.random() * 30) * this.scale * sizeMultiplier; // Varied bush widths
         this.height = (30 + Math.random() * 20) * this.scale * sizeMultiplier; // Varied heights
 
-        // Depth offset: foreground bushes go deeper into grass area for depth perception
-        const depthOffset = this.depth < 0.3 ? (15 + Math.random() * 30) : (Math.random() * 15);
+        // Spread bushes throughout entire grass area for depth
+        // depth=1 (far/background) at top of grass, depth=0 (near/foreground) at bottom
+        const grassHeight = canvas.height * (1 - GROUND_HEIGHT_RATIO);
+        const depthOffset = (1 - this.depth) * grassHeight;
         this.depthOffset = depthOffset;
         this.y = canvas.height * GROUND_HEIGHT_RATIO + depthOffset;
 
@@ -13930,16 +13932,18 @@ class Bush {
 class TallGrass {
     constructor(x, width, depth) {
         this.x = x;
-        this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground, 1 = background)
-        this.scale = 1 - this.depth * 0.3; // Scale based on depth (0.7x to 1.0x)
+        this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground/bottom, 1 = background/top)
+        this.scale = 1 - this.depth * 0.5; // Scale based on depth (0.5x to 1.0x) - increased variance for better perspective
         this.width = (width || (30 + Math.random() * 50)) * this.scale; // 30-80px wide patches, scaled by depth
         this.bladeCount = Math.floor((10 + Math.random() * 15) * this.scale); // 10-25 blades, scaled by depth
         this.height = (35 + Math.random() * 25) * this.scale; // 35-60px tall, scaled by depth
         this.color = this.generateGrassColor();
         this.swayOffset = Math.random() * Math.PI * 2; // For animation
 
-        // Depth offset: foreground grass goes deeper into grass area for depth perception
-        const depthOffset = this.depth < 0.3 ? (10 + Math.random() * 20) : (Math.random() * 10);
+        // Spread tall grass throughout entire grass area for depth
+        // depth=1 (far/background) at top of grass, depth=0 (near/foreground) at bottom
+        const grassHeight = canvas.height * (1 - GROUND_HEIGHT_RATIO);
+        const depthOffset = (1 - this.depth) * grassHeight;
         this.depthOffset = depthOffset;
         this.y = canvas.height * GROUND_HEIGHT_RATIO + depthOffset;
 
@@ -14006,8 +14010,8 @@ class TallGrass {
 class Stone {
     constructor(x, y, depth) {
         this.x = x;
-        this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground, 1 = background)
-        this.scale = 1 - this.depth * 0.3; // Scale based on depth (0.7x to 1.0x)
+        this.depth = depth !== undefined ? depth : Math.random(); // For layering (0 = foreground/bottom, 1 = background/top)
+        this.scale = 1 - this.depth * 0.5; // Scale based on depth (0.5x to 1.0x) - increased variance for better perspective
         this.size = (8 + Math.random() * 15) * this.scale; // 8-23px, scaled by depth
         this.color = this.generateStoneColor();
         this.shape = Math.random(); // For visual variety
@@ -14015,8 +14019,10 @@ class Stone {
         // Pre-calculate ellipse ratio to prevent vibration
         this.ellipseRatio = 0.7 + Math.random() * 0.4;
 
-        // Depth offset: foreground stones go deeper into grass area for depth perception
-        const depthOffset = this.depth < 0.3 ? (5 + Math.random() * 15) : (Math.random() * 10);
+        // Spread stones throughout entire grass area for depth
+        // depth=1 (far/background) at top of grass, depth=0 (near/foreground) at bottom
+        const grassHeight = canvas.height * (1 - GROUND_HEIGHT_RATIO);
+        const depthOffset = (1 - this.depth) * grassHeight;
         this.depthOffset = depthOffset;
         this.y = y || (canvas.height * GROUND_HEIGHT_RATIO + depthOffset);
     }
@@ -21750,14 +21756,16 @@ if (mushroomMode) {
         bush.draw();
     });
 
-    // Update and draw tall grass patches
-    tallGrassPatches.forEach(grass => {
+    // Update and draw tall grass patches sorted by depth
+    const sortedGrassPatches = [...tallGrassPatches].sort((a, b) => b.depth - a.depth);
+    sortedGrassPatches.forEach(grass => {
         grass.update(deltaTime, timeOfDay);
         grass.draw();
     });
 
-    // Draw decorative stones/rocks
-    stones.forEach(stone => {
+    // Draw decorative stones/rocks sorted by depth
+    const sortedStones = [...stones].sort((a, b) => b.depth - a.depth);
+    sortedStones.forEach(stone => {
         stone.draw();
     });
 
@@ -22405,13 +22413,15 @@ function drawFullScene() {
         bush.draw();
     }
 
-    // Draw tall grass patches
-    for (const grass of tallGrassPatches) {
+    // Draw tall grass patches sorted by depth for proper layering
+    const sortedGrass = [...tallGrassPatches].sort((a, b) => b.depth - a.depth);
+    for (const grass of sortedGrass) {
         grass.draw();
     }
 
-    // Draw decorative stones
-    for (const stone of stones) {
+    // Draw decorative stones sorted by depth for proper layering
+    const sortedStones = [...stones].sort((a, b) => b.depth - a.depth);
+    for (const stone of sortedStones) {
         stone.draw();
     }
 
