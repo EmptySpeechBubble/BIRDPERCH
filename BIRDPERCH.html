@@ -444,7 +444,7 @@
             <button id="toggleWindChimeBtn">🔔 Wind Chimes: OFF</button>
             <button id="toggleMushroomModeBtn">🍄 Mushroom Mode</button>
             <button id="spawnGameboyBtn">🎮 Spawn Gameboy</button>
-            <button id="triggerPeckingBtn">🍽️ Trigger Pecking</button>
+            <button id="spawnSillBirdBtn">🐦 Spawn Bird on Sill</button>
             <button id="testChirpBtn">🎵 Test Chirps</button>
             <button id="addRatBtn">🐀 Add Rat</button>
             <button id="spawnPondBtn">💧 Spawn Pond</button>
@@ -2149,6 +2149,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
             'Charlie', 'Jamie', 'Blake', 'Drew', 'Parker', 'Avery', 'Reese', 'Harper',
             'Elliot', 'Skylar', 'Peyton', 'Cameron', 'Dakota', 'Rowan', 'Sage', 'River',
             'Finley', 'Hayden', 'Logan', 'Ryan', 'Jesse', 'Kelly', 'Terry', 'Robin',
+            'Phil', 'Kathy', 'Elizabeth', 'Kodiak',
             'Pat', 'Chris', 'Nico', 'Ash', 'Jules', 'Max', 'Lee', 'Ray',
             // More American names
             'Ben', 'Emma', 'Jack', 'Olivia', 'Noah', 'Sophia', 'Liam', 'Ava',
@@ -6256,18 +6257,18 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
         // Curtains Drawing Function
         function drawCurtains() {
-            // Only show curtains when window sill is also enabled
-            if (!curtainsEnabled || !windowSillEnabled || !curtainColor) return;
+            // Curtains can work with or without frame
+            if (!curtainsEnabled || !curtainColor) return;
 
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to screen space
 
-            // Frame dimensions (must match window sill)
-            const sideThickness = 40;
-            const topThickness = 30;
-            const bottomThickness = 60;
+            // Frame dimensions (if frame is enabled)
+            const sideThickness = windowSillEnabled ? 40 : 0;
+            const topThickness = windowSillEnabled ? 30 : 0;
+            const bottomThickness = windowSillEnabled ? 60 : 0;
 
-            // Create clipping region for inside the frame only
+            // Create clipping region (frame area if enabled, or full screen if not)
             ctx.beginPath();
             ctx.rect(
                 sideThickness,
@@ -25006,15 +25007,49 @@ spawnGameboyBtn.addEventListener('click', () => {
 });
 
 // Trigger pecking behavior for testing
-const triggerPeckingBtn = document.getElementById('triggerPeckingBtn');
-triggerPeckingBtn.addEventListener('click', () => {
-    if (birds.length > 0) {
-        const bird = birds[Math.floor(Math.random() * birds.length)];
-        bird.startPecking();
-        debugLog(`Triggered pecking for bird at (${bird.x.toFixed(0)}, ${bird.y.toFixed(0)})`);
-    } else {
-        debugLog("No birds available to trigger pecking");
+const spawnSillBirdBtn = document.getElementById('spawnSillBirdBtn');
+spawnSillBirdBtn.addEventListener('click', () => {
+    if (!windowSillEnabled) {
+        debugLog("Window sill must be enabled first!");
+        return;
     }
+
+    initializeSillPerchSpots(); // Ensure spots are initialized
+
+    const availableSpots = sillPerchSpots.filter(spot => !spot.occupied);
+    const sillBirdCount = sillPerchSpots.filter(spot => spot.occupied).length;
+
+    if (availableSpots.length === 0 || sillBirdCount >= MAX_SILL_BIRDS) {
+        debugLog(`Sill is full (${sillBirdCount}/${MAX_SILL_BIRDS} birds)`);
+        return;
+    }
+
+    // Spawn a new bird or use existing one
+    let bird;
+    if (birds.length > 0 && Math.random() < 0.7) {
+        // Use existing bird
+        bird = birds[Math.floor(Math.random() * birds.length)];
+    } else {
+        // Spawn new bird
+        const birdType = BIRD_TYPES[Math.floor(Math.random() * BIRD_TYPES.length)];
+        bird = new Bird(false, birdType, canvas.width / 2, canvas.height * 0.3);
+        birds.push(bird);
+    }
+
+    // Choose random available spot
+    const chosenSpot = availableSpots[Math.floor(Math.random() * availableSpots.length)];
+    chosenSpot.occupied = true;
+    chosenSpot.bird = bird;
+
+    // Set bird to sill mode
+    bird.isOnSill = true;
+    bird.state = BIRD_STATES.PERCHED;
+    bird.stateTimer = 0;
+
+    // Fly to sill spot
+    bird.generatePath(chosenSpot.x, chosenSpot.y);
+
+    debugLog(`Spawned bird on window sill at position ${sillBirdCount + 1}`);
 });
 
 // Test all chirp types
