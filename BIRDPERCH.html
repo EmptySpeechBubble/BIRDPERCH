@@ -10902,9 +10902,16 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                                     twigs.splice(twigIndex, 1);
                                     this.materialsHeld = 1; // Carrying one twig
                                     debugLog(`Bird collected${this.hasSpecialTwig ? ' special' : ''} twig.`);
+                                } else {
+                                    // FIXED: Twig was already collected by another bird - clear target and find another
+                                    this.target = null;
+                                    this.state = BIRD_STATES.FLYING;
+                                    this.stateTimer = 0;
+                                    debugLog(`Bird's target twig was already collected - searching for another`);
+                                    break; // Exit COLLECTING case immediately
                                 }
                             }
-                            
+
                             // FIXED: Prioritize ongoing birdhouse construction over completed nests
                             if (this.isWild) {
                                 // Wild birds don't build nests - just drop the twig
