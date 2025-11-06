@@ -10443,7 +10443,7 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 break;
                             }
 
-                            // IMPROVED: CHECK FOR BATHING FIRST - check both puddles and ponds
+                            // FIXED: CHECK FOR BATHING FIRST - check both puddles and ponds
                             // Higher chance if recent rain, or if ponds exist (permanent water source)
                             const bathingCooldown = 300000 + Math.random() * 300000; // 5-10 minutes
                             const timeSinceLastBath = Date.now() - this.lastBathedTime;
@@ -10451,6 +10451,7 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                             if ((puddles.length > 0 || ponds.length > 0) && Math.random() < bathingChance && timeSinceLastBath > bathingCooldown) {
                                 this.findPuddle();
                                 debugLog(`Bird seeking water to bathe from IDLE state - chance: ${bathingChance}`);
+                                break; // CRITICAL FIX: Exit after choosing to bathe!
                             }
 
                             // V26: Adjusted state preferences for more perching
@@ -10682,6 +10683,12 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                     // Go find food (but only after resting for 60 seconds)
                                     this.findFoodSource();
                                     debugLog(`${getBirdName(this)} leaving perch after resting - now hungry`);
+                                } else if ((puddles.length > 0 || ponds.length > 0) &&
+                                           (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000) &&
+                                           Math.random() < 0.3) {
+                                    // NEW: 30% chance to bathe after leaving perch (if water exists and cooldown expired)
+                                    this.findPuddle();
+                                    debugLog(`${getBirdName(this)} leaving perch to bathe`);
                                 } else if (!this.isWild && !this.myNest && Math.random() < 0.2) {
                                     // Balanced: 20% chance to collect nest materials
                                     this.findTwigs();
