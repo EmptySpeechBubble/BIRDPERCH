@@ -121,7 +121,7 @@
                 max-width: 150px;
                 font-size: 10px;
             }
-            .toggle-panel, .curtain-toggle, .controls-hint {
+            .toggle-panel, .controls-hint {
                 font-size: 10px;
                 padding: 3px 6px;
             }
@@ -549,7 +549,7 @@
         <details class="detail-section">
             <summary>🌟 Nighttime Wonders</summary>
             <ul>
-                <li><strong>Fireflies:</strong> Glowing insects appear on 35% of nights. Birds can hunt and catch them for food!</li>
+                <li><strong>Fireflies:</strong> Glowing insects appear on 10% of nights. Birds can hunt and catch them for food!</li>
                 <li><strong>Pulsing Glow:</strong> Fireflies have a gentle pulsing light effect as they flutter through the air</li>
                 <li><strong>Dawn Departure:</strong> All fireflies disappear when the sun rises</li>
                 <li><strong>Owl Activity:</strong> Owls hunt during firefly nights, creating a living nighttime ecosystem</li>
@@ -846,17 +846,6 @@
                     infoPanel.style.display = 'none';
                     toggleInfo.textContent = 'ℹ️ Show Info';
                 }
-            });
-        }
-
-        // Curtain toggle
-        const toggleCurtains = document.getElementById('toggleCurtains');
-        let showCurtains = false;
-        
-        if (toggleCurtains) {  // Add a safety check
-            toggleCurtains.addEventListener('click', () => {
-                showCurtains = !showCurtains;
-                toggleCurtains.textContent = showCurtains ? '🪟 Hide Curtains' : '🪟 Show Curtains';
             });
         }
 
@@ -5008,9 +4997,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
         addDiaryEntry(summaryText, 'normal');
     }
 
-    // Start of night - randomly determine if fireflies should appear (35% chance)
+    // Start of night - randomly determine if fireflies should appear (10% chance)
     if (previousTimeOfDay < 1 && timeOfDay >= 1) {
-        // FIXED: Made fireflies much more rare (10% chance instead of 35%)
+        // Fireflies are rare - 10% chance per night
         fireflyNightActive = Math.random() < 0.10;
         if (fireflyNightActive) {
             debugLog('Fireflies will appear tonight');
@@ -5553,11 +5542,6 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             );
         }
 
-
-        // Modified drawCurtains to do nothing
-        function drawCurtains() {
-            return; // Skip drawing curtains
-        }
 
         // Draw debug visuals
         function drawDebugVisuals() {
@@ -21367,11 +21351,6 @@ if (mushroomMode) {
         drawRainbow();
     }
 
-    // Draw curtains (if enabled)
-    if (showCurtains) {
-        drawCurtains();
-    }
-
     // ===== MIDDLE GROUND LAYER =====
     // Draw trees in proper depth order (back to front)
     drawTrees(deltaTime);
@@ -22023,10 +22002,6 @@ function drawFullScene() {
     // Draw rainbow if visible
     if (rainbowVisible) {
         drawRainbow();
-    }
-
-    if (showCurtains) {
-        drawCurtains();
     }
 
     // ===== MIDDLE GROUND LAYER =====
