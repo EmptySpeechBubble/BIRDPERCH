@@ -8651,6 +8651,10 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 this.chirpCooldown = 0;
                 this.lastContactCall = 0;
 
+                // Behavior cooldowns (in milliseconds)
+                this.lastBathedTime = 0;
+                this.lastPreenedTime = 0;
+
                 // Ground pecking
                 this.isOnGround = false;
                 this.peckingInterval = PECKING_INTERVAL_SOLO;
@@ -10431,8 +10435,10 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
 
                             // IMPROVED: CHECK FOR BATHING FIRST - check both puddles and ponds
                             // Higher chance if recent rain, or if ponds exist (permanent water source)
+                            const bathingCooldown = 300000 + Math.random() * 300000; // 5-10 minutes
+                            const timeSinceLastBath = Date.now() - this.lastBathedTime;
                             const bathingChance = wasRaining ? 0.6 : (ponds.length > 0 ? 0.3 : 0.2);
-                            if ((puddles.length > 0 || ponds.length > 0) && Math.random() < bathingChance) {
+                            if ((puddles.length > 0 || ponds.length > 0) && Math.random() < bathingChance && timeSinceLastBath > bathingCooldown) {
                                 this.findPuddle();
                                 debugLog(`Bird seeking water to bathe from IDLE state - chance: ${bathingChance}`);
                             }
@@ -11611,9 +11617,10 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                             } else if (!this.isWild && babyBirds.length > 0 && Math.random() < 0.5) { // Reduced from 0.6
                                 // Look for babies to feed
                                 this.findBabyBirds();
-                            } else if ((wasRaining && puddles.length > 0) || (ponds.length > 0 && Math.random() < 0.4)) {
+                            } else if (((wasRaining && puddles.length > 0) || (ponds.length > 0 && Math.random() < 0.4)) && (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000)) {
                                 // FIXED: Go bathe in puddles after rain OR in ponds anytime (40% chance)
                                 // Ponds are permanent water sources - birds should use them even without recent rain
+                                // Cooldown: 5-10 minutes between baths
                                 this.findPuddle();
                                 debugLog(`Bird seeking water to bathe - ${wasRaining ? 'after rain' : 'at pond'}`);
                             } else {
@@ -11744,6 +11751,7 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
                             // IMPROVED: Log when bird starts bathing (only once)
                             if (!this.bathingStarted) {
                                 this.bathingStarted = true;
+                                this.lastBathedTime = Date.now(); // Update cooldown timer
                                 debugLog(`Bird bathing in ${waterType} at (${nearestWater.x.toFixed(0)}, ${nearestWater.y.toFixed(0)})`);
                             }
 
@@ -11816,6 +11824,11 @@ if ((isRaining || timeOfDay >= 1) && Math.random() < 0.4) { // 40% chance to see
 
                     case BIRD_STATES.PREENING:
                         // Grooming feathers after bathing, eating, or while idle
+                        // Update timestamp on first frame of preening
+                        if (this.stateTimer < 100) {
+                            this.lastPreenedTime = Date.now();
+                        }
+
                         this.velocity.x *= 0.9; // Slow movement while preening
                         this.velocity.y *= 0.9;
 
@@ -12282,8 +12295,9 @@ if (this.pathIndex >= this.path.length) {
                                 } else if (this.hunger > HUNGER_CRITICAL_THRESHOLD - 50) {
                                     // Always find food if hungry
                                     this.findFoodSource();
-                                } else if ((wasRaining || ponds.length > 0) && Math.random() < 0.15) {
+                                } else if ((wasRaining || ponds.length > 0) && Math.random() < 0.15 && (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000)) {
                                     // IMPROVED: 15% chance to bathe when flying (if water exists)
+                                    // Cooldown: 5-10 minutes between baths
                                     this.findPuddle();
                                     debugLog(`Bird deciding to bathe from FLYING state`);
                                 } else if (!this.isWild && !this.myNest && r < 0.1) {
