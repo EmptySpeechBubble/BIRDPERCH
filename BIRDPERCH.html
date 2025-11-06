@@ -2120,8 +2120,9 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const BIRD_HUNGER_RATE = 0.006; // Further reduced from 0.02 to encourage less food hunting
         const HUNGER_CRITICAL_THRESHOLD = 300;
         const BIRD_POOP_DELAY = 360000; // 6 minutes between poops
-        const TREE_DEGRADATION_RATE = 0.25;
+        const TREE_DEGRADATION_RATE = 0.15; // Reduced from 0.25 for longer tree life
         const TREE_HEALTH_THRESHOLD = 0;
+        const MAX_TREE_DELTA_TIME = 33; // Cap deltaTime at 33ms (30 FPS) for consistent degradation across all computers
         const BIRD_VISION_RADIUS = 400; // Base value - scaled by getResponsiveScale()
         const BIRD_FOOD_VISION_RADIUS = 800; // Base value - scaled by getResponsiveScale()
         const RAT_VISION_RADIUS = 80;
@@ -2154,7 +2155,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const AIR_RESISTANCE = 0.98;
         const MAX_TREES = 25;
         const MIN_TREES = 3;
-        const TREE_LIFESPAN = 1200000; // 20 minutes
+        const TREE_LIFESPAN = 1560000; // 26 minutes = 6.5 in-game days (was 20 min = 5 days)
         const BRANCH_GROWTH_INTERVAL = 540000; // 9 minutes
         const LIGHTNING_CHANCE = 0.3; // 30% chance of lightning during rain
         const LIGHTNING_TREE_DAMAGE = 70; // Damage to tree from lightning
@@ -8059,8 +8060,11 @@ function drawWorms() {
             }
 
             degrade(deltaTime) {
+                // Cap deltaTime to prevent performance-based degradation on slower computers
+                const cappedDeltaTime = Math.min(deltaTime, MAX_TREE_DELTA_TIME);
+
                 // Increment age with slight randomness
-                this.age += deltaTime * (0.4 + Math.random() * 0.1);
+                this.age += cappedDeltaTime * (0.4 + Math.random() * 0.1);
 
                 // Trees with nests, eggs, or baby birds are much more resistant
                 const hasNest = this.nest !== null;
@@ -8081,7 +8085,7 @@ function drawWorms() {
                 // Trees degrade with age and can recover with rain
                 if (timeOfDay >= 1 && !isRaining) {
                     // Faster degradation at night without rain
-                    this.health -= TREE_DEGRADATION_RATE * degradationMultiplier * lifespanFactor * (deltaTime / 1000);
+                    this.health -= TREE_DEGRADATION_RATE * degradationMultiplier * lifespanFactor * (cappedDeltaTime / 1000);
                 } else if (isRaining && timeOfDay < 1) {
 
 
@@ -8089,7 +8093,7 @@ function drawWorms() {
                 } else if (isRaining && timeOfDay < 1) {
     // Trees recover during rain in daytime - extra recovery for trees with eggs/babies
     const recoveryRate = hasEggsOrBabies ? 0.04 : (hasNest ? 0.025 : 0.0125);
-    this.health = Math.min(100, this.health + recoveryRate * (deltaTime / 1000));
+    this.health = Math.min(100, this.health + recoveryRate * (cappedDeltaTime / 1000));
 } else if (timeOfDay < 1) {
 
 
@@ -8098,7 +8102,7 @@ function drawWorms() {
 } else if (timeOfDay < 1) {
     // Trees gain a small health boost during the day, more if they have nests/eggs/babies
     const sunRecoveryRate = hasEggsOrBabies ? 0.0125 : (hasNest ? 0.00625 : 0.003);
-    this.health = Math.min(100, this.health + sunRecoveryRate * (deltaTime / 1000));
+    this.health = Math.min(100, this.health + sunRecoveryRate * (cappedDeltaTime / 1000));
 }
 
 
