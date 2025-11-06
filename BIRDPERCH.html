@@ -6498,6 +6498,14 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             addOccupant(bird) {
                 if (this.canAcceptOccupant()) {
                     this.occupants.push(bird);
+
+                    // FEATURE: Birds entering glowing birdhouses receive the glow
+                    if (this.glowing && !bird.glowing) {
+                        bird.glowing = true;
+                        bird.glowPhase = Math.random() * Math.PI * 2;
+                        debugLog(`Bird entered glowing birdhouse and now glows green!`);
+                    }
+
                     return true;
                 }
                 return false;
@@ -10476,9 +10484,8 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 );
                             }
 
-                            // IMPROVED: Increased chance to build birdhouse (25% chance - was 15%)
-                            // Also check if we haven't reached the limit yet
-                            if (!this.isWild && Math.random() < 0.25 && this.materialsHeld === 0 && birdhouses.length < 3) {
+                            // FIXED: Increased chance to build birdhouse (15% chance - was 5%)
+                            if (!this.isWild && Math.random() < 0.15 && this.materialsHeld === 0) {
                                 this.findOrCreateBirdhouse();
                             }
                         } else {
@@ -13352,6 +13359,26 @@ ctx.fill();
                         ctx.fillStyle = '#4169E1'; // Royal blue
                         ctx.fillText('Z', this.x + (i - 1) * 8, floatY);
                     }
+
+                    ctx.restore();
+                }
+
+                // FEATURE: Draw green glow effect for birds from UFO-affected birdhouses
+                if (this.glowing) {
+                    if (!this.glowPhase) this.glowPhase = 0;
+                    this.glowPhase += 0.05;
+
+                    const glowIntensity = 0.5 + Math.sin(this.glowPhase) * 0.3;
+                    ctx.save();
+                    ctx.globalAlpha = glowIntensity;
+                    ctx.fillStyle = '#90EE90'; // Light green glow
+                    ctx.shadowColor = '#90EE90';
+                    ctx.shadowBlur = 15;
+
+                    // Draw glowing aura around bird
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, 20 * sizeMultiplier, 0, Math.PI * 2);
+                    ctx.fill();
 
                     ctx.restore();
                 }
