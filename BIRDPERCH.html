@@ -14084,16 +14084,22 @@ class Stone {
         ctx.translate(this.x, this.y);
         ctx.rotate(this.rotation);
 
-        // Draw stone as irregular oval/circle
+        // Clip to show stones sitting on ground (remove small bottom portion)
+        ctx.beginPath();
+        ctx.rect(-this.size * 1.5, -this.size * 1.5, this.size * 3, this.size * 2.2);
+        ctx.clip();
+
+        // Draw stone as flattened oval to appear grounded
         ctx.fillStyle = this.color;
         ctx.beginPath();
 
-        if (this.shape < 0.5) {
-            // Round stone
-            ctx.arc(0, 0, this.size, 0, Math.PI * 2);
+        if (this.shape < 0.3) {
+            // Flattened round stone (80% height for grounded look)
+            ctx.ellipse(0, 0, this.size, this.size * 0.8, 0, 0, Math.PI * 2);
         } else {
-            // Irregular stone (ellipse) - use pre-calculated ratio to prevent vibration
-            ctx.ellipse(0, 0, this.size, this.size * this.ellipseRatio, 0, 0, Math.PI * 2);
+            // Irregular stone (ellipse) - flattened vertically for grounded appearance
+            const flattenedRatio = this.ellipseRatio * 0.75; // Make 25% flatter
+            ctx.ellipse(0, 0, this.size, this.size * flattenedRatio, 0, 0, Math.PI * 2);
         }
 
         ctx.fill();
@@ -14101,13 +14107,13 @@ class Stone {
         // Add slight highlight for depth
         ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
         ctx.beginPath();
-        ctx.arc(-this.size * 0.2, -this.size * 0.2, this.size * 0.3, 0, Math.PI * 2);
+        ctx.arc(-this.size * 0.2, -this.size * 0.3, this.size * 0.25, 0, Math.PI * 2);
         ctx.fill();
 
-        // Add shadow for depth
+        // Add shadow for depth (moved down slightly)
         ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
         ctx.beginPath();
-        ctx.arc(this.size * 0.3, this.size * 0.3, this.size * 0.2, 0, Math.PI * 2);
+        ctx.arc(this.size * 0.25, this.size * 0.35, this.size * 0.2, 0, Math.PI * 2);
         ctx.fill();
 
         ctx.restore();
