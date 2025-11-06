@@ -12324,8 +12324,8 @@ if (this.pathIndex >= this.path.length) {
                                 } else if (this.hunger > HUNGER_CRITICAL_THRESHOLD - 50) {
                                     // Always find food if hungry
                                     this.findFoodSource();
-                                } else if ((wasRaining || ponds.length > 0) && Math.random() < 0.15 && (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000)) {
-                                    // IMPROVED: 15% chance to bathe when flying (if water exists)
+                                } else if ((wasRaining || ponds.length > 0) && Math.random() < 0.25 && (Date.now() - this.lastBathedTime) > (300000 + Math.random() * 300000)) {
+                                    // IMPROVED: 25% chance to bathe when flying (if water exists)
                                     // Cooldown: 5-10 minutes between baths
                                     this.findPuddle();
                                     debugLog(`Bird deciding to bathe from FLYING state`);
