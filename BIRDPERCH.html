@@ -2146,7 +2146,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const BIRD_SPAWN_RATE = 300000; // Every 5 minutes, check if we need more birds
         const WILD_BIRD_SPAWN_RATE = 120000; // Wild birds come every 2 minutes
         const WILD_BIRD_SPAWN_CHANCE = 0.2; // Reduced from 0.25
-        const TREE_REGROWTH_RATE = 180000; // Every 2 minutes
+        const TREE_REGROWTH_RATE_BASE = 90000; // Base: 90 seconds (was 180000)
         const GUARANTEED_TREE_CHECK_RATE = 40000; // Check for minimum tree count every 40 seconds
         const POOP_WASH_RATE = 0.2;
         const RAIN_SLOWDOWN_FACTOR = 0.6;
@@ -7803,7 +7803,7 @@ function drawWorms() {
                 this.leafColorNight = '#1A6B1A'; // Default dark green
 
                 const variantRoll = Math.random();
-                if (variantRoll < 0.10) { // 10% total chance for special trees
+                if (variantRoll < 0.15) { // 15% total chance for special trees (increased from 10%)
                     const variants = [
                         {
                             name: 'Birch',
@@ -7812,6 +7812,7 @@ function drawWorms() {
                             leafColorNight: '#6B8E6B',
                             trunkMod: 0.9, // Slightly thinner
                             heightMod: 1.1, // Slightly taller
+                            preferredTime: 'morning', // More common in morning
                         },
                         {
                             name: 'Cherry',
@@ -7819,6 +7820,7 @@ function drawWorms() {
                             leafColor: '#FFB7C5', // Pink blossoms
                             leafColorNight: '#CC8FA3',
                             leafMod: 1.15, // Fuller canopy
+                            preferredTime: 'morning', // Beautiful in morning light
                         },
                         {
                             name: 'Willow',
@@ -7827,6 +7829,7 @@ function drawWorms() {
                             leafColorNight: '#7A9E2A',
                             heightMod: 1.25, // Taller
                             trunkMod: 0.85, // Thinner
+                            preferredTime: 'day', // Graceful in daylight
                         },
                         {
                             name: 'Oak',
@@ -7835,6 +7838,7 @@ function drawWorms() {
                             leafColorNight: '#1A6B1A',
                             trunkMod: 1.25, // Thicker trunk
                             widthMod: 1.2, // Wider canopy
+                            preferredTime: 'day', // Strong presence in full sun
                         },
                         {
                             name: 'Pine',
@@ -7843,6 +7847,7 @@ function drawWorms() {
                             leafColorNight: '#012818',
                             leafMod: 0.85, // Narrower
                             heightMod: 1.2, // Taller
+                            preferredTime: 'evening', // Mysterious at dusk
                         },
                         {
                             name: 'Maple',
@@ -7850,6 +7855,7 @@ function drawWorms() {
                             leafColor: '#DC143C', // Crimson (fall colors)
                             leafColorNight: '#B01030',
                             leafMod: 1.1, // Fuller
+                            preferredTime: 'evening', // Crimson glow at sunset
                         },
                         {
                             name: 'Aspen',
@@ -7858,10 +7864,33 @@ function drawWorms() {
                             leafColorNight: '#CCA000',
                             heightMod: 1.15,
                             trunkMod: 0.8, // Thin trunk
+                            preferredTime: 'any', // Golden beauty anytime
                         }
                     ];
 
-                    this.treeVariant = variants[Math.floor(Math.random() * variants.length)];
+                    // Time-based variant weighting for more variety
+                    const currentTime = timeOfDay < 1 ? 'day' : 'night';
+                    const currentHourOfDay = Math.floor(timeOfDay * 12); // 0-11 for day, 12-23 for night
+                    let timeCategory;
+
+                    if (currentTime === 'day') {
+                        if (currentHourOfDay < 3) timeCategory = 'morning'; // 6am-9am
+                        else if (currentHourOfDay < 9) timeCategory = 'day'; // 9am-3pm
+                        else timeCategory = 'evening'; // 3pm-6pm
+                    } else {
+                        timeCategory = 'night';
+                    }
+
+                    // Filter variants that match current time or are "any time"
+                    const preferredVariants = variants.filter(v =>
+                        v.preferredTime === timeCategory || v.preferredTime === 'any'
+                    );
+
+                    // 70% chance to use preferred variants, 30% chance any variant
+                    const usePreferred = Math.random() < 0.7 && preferredVariants.length > 0;
+                    const variantPool = usePreferred ? preferredVariants : variants;
+
+                    this.treeVariant = variantPool[Math.floor(Math.random() * variantPool.length)];
                     this.barkColor = this.treeVariant.barkColor;
                     this.leafColor = this.treeVariant.leafColor;
                     this.leafColorNight = this.treeVariant.leafColorNight;
@@ -8342,59 +8371,113 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 }
             }
             
-            // Stagger new tree growth
-            if (trees.length < MAX_TREES && Math.random() < 0.7) { // 70% chance to actually grow a tree
-                let validPosition = false;
-                let attempts = 0;
+            // NEW: Varied tree spawning events for more interesting scenarios
+            if (trees.length < MAX_TREES) {
+                // Determine spawn event type with weighted probabilities
+                const spawnRoll = Math.random();
+                let spawnEvent, treesToSpawn;
 
-                while (!validPosition && attempts < 50) {
-                    attempts++;
-                    const trunkHeight = Math.random() < 0.1 && tallTreeCount < 3 ?
-                        150 + Math.random() * 50 :
-                        80 + Math.random() * 70;
+                if (spawnRoll < 0.02) {
+                    // 2% chance: "Forest Bloom" - rare magical event!
+                    spawnEvent = 'forest_bloom';
+                    treesToSpawn = Math.min(5 + Math.floor(Math.random() * 3), MAX_TREES - trees.length); // 5-7 trees
+                    debugLog(`🌸 FOREST BLOOM EVENT! ${treesToSpawn} magical trees sprouting!`);
+                } else if (spawnRoll < 0.07) {
+                    // 5% chance: Cluster of trees
+                    spawnEvent = 'cluster';
+                    treesToSpawn = Math.min(3 + Math.floor(Math.random() * 2), MAX_TREES - trees.length); // 3-4 trees
+                    debugLog(`🌳 Tree cluster forming (${treesToSpawn} trees)`);
+                } else if (spawnRoll < 0.32) {
+                    // 25% chance: Pair of trees
+                    spawnEvent = 'pair';
+                    treesToSpawn = Math.min(2, MAX_TREES - trees.length);
+                } else if (spawnRoll < 0.90) {
+                    // 58% chance: Single tree
+                    spawnEvent = 'single';
+                    treesToSpawn = 1;
+                } else {
+                    // 10% chance: No spawn this cycle
+                    return;
+                }
 
-                    // Better positioning to avoid edges and spread trees more naturally
-                    const margin = 100; 
-                    const x = margin + Math.random() * (canvas.width - margin * 2);
-                    const hasBranches = Math.random() < 0.8; // More trees have branches
+                // Spawn trees based on event type
+                for (let t = 0; t < treesToSpawn; t++) {
+                    let validPosition = false;
+                    let attempts = 0;
 
-                    // Check if position is valid (not too close to other trees)
-                    validPosition = trees.every(tree =>
-                        Math.abs(tree.x - x) > 100
-                    );
+                    while (!validPosition && attempts < 50) {
+                        attempts++;
 
-                    if (validPosition) {
-                        // Occasionally grow much taller trees
-                        const extraTall = Math.random() < 0.25; // 25% chance for extra tall tree
-                        
-                        if (trunkHeight > 150 || extraTall) tallTreeCount++;
-                        
-                        // Allow for taller trees overall
-                        const finalTrunkHeight = extraTall ? 
-                        200 + Math.random() * 100 : // Even taller trees: 200-300px
-                        trunkHeight;                // Normal trees
-                        
-                        // Thicker trunks for taller trees
-                        const trunkWidth = extraTall ?
-                            20 + Math.random() * 15 :  // Thicker trunks for tall trees
-                            15 + Math.random() * 10;   // Normal trunks
+                        // Determine tree position based on event type
+                        let x;
+                        const margin = 100;
 
-                        // Larger leaf radius for taller trees
-                        const leafRadius = extraTall ?
-                            60 + Math.random() * 30 :  // Larger leaf clusters for tall trees
-                            40 + Math.random() * 20;   // Normal leaf clusters
-                        
-                        const newTree = new Tree(
-                            x, 
-                            trunkWidth, 
-                            finalTrunkHeight, 
-                            leafRadius, 
-                            hasBranches
-                        );
-                        // Stagger tree ages
-                        newTree.age = Math.random() * (TREE_LIFESPAN * 0.5);
-                        trees.push(newTree);
-                        debugLog(`New tree grown at (${x}). Height: ${finalTrunkHeight}`);
+                        if (spawnEvent === 'forest_bloom') {
+                            // Spread across entire canvas for bloom events
+                            x = margin + Math.random() * (canvas.width - margin * 2);
+                        } else if (spawnEvent === 'cluster' || spawnEvent === 'pair') {
+                            // Cluster trees closer together
+                            if (t === 0) {
+                                // First tree in cluster - random position
+                                x = margin + Math.random() * (canvas.width - margin * 2);
+                            } else {
+                                // Subsequent trees - near previous tree
+                                const prevTree = trees[trees.length - 1];
+                                x = prevTree.x + (Math.random() - 0.5) * 200; // Within 100px
+                            }
+                        } else {
+                            // Single tree - random position
+                            x = margin + Math.random() * (canvas.width - margin * 2);
+                        }
+
+                        // Clamp to screen bounds
+                        x = Math.max(margin, Math.min(canvas.width - margin, x));
+
+                        // Check if position is valid (not too close to existing trees)
+                        const minDistance = (spawnEvent === 'cluster' || spawnEvent === 'pair') ? 80 : 100;
+                        validPosition = trees.every(tree => Math.abs(tree.x - x) > minDistance);
+
+                        if (validPosition) {
+                            // Determine tree characteristics based on event
+                            let extraTall, trunkHeight, trunkWidth, leafRadius, hasBranches;
+
+                            if (spawnEvent === 'forest_bloom') {
+                                // Bloom events: more special trees!
+                                extraTall = Math.random() < 0.4; // 40% tall trees
+                                trunkHeight = extraTall ?
+                                    180 + Math.random() * 100 :
+                                    100 + Math.random() * 60;
+                                hasBranches = true; // All bloom trees have branches
+                            } else {
+                                // Normal spawning
+                                extraTall = Math.random() < 0.25; // 25% tall trees
+                                trunkHeight = extraTall ?
+                                    200 + Math.random() * 100 :
+                                    80 + Math.random() * 70;
+                                hasBranches = Math.random() < 0.8;
+                            }
+
+                            if (extraTall) tallTreeCount++;
+
+                            trunkWidth = extraTall ?
+                                20 + Math.random() * 15 :
+                                15 + Math.random() * 10;
+
+                            leafRadius = extraTall ?
+                                60 + Math.random() * 30 :
+                                40 + Math.random() * 20;
+
+                            const newTree = new Tree(x, trunkWidth, trunkHeight, leafRadius, hasBranches);
+                            newTree.age = Math.random() * (TREE_LIFESPAN * 0.5);
+
+                            // Forest bloom trees start younger for longer life
+                            if (spawnEvent === 'forest_bloom') {
+                                newTree.age = Math.random() * (TREE_LIFESPAN * 0.3);
+                            }
+
+                            trees.push(newTree);
+                            debugLog(`New ${spawnEvent} tree grown at (${x}). Height: ${trunkHeight.toFixed(0)}`);
+                        }
                     }
                 }
             }
@@ -22294,7 +22377,15 @@ for (let i = owls.length - 1; i >= 0; i--) {
         spawnButterflies();
     }
 
-    if (simulationTime % TREE_REGROWTH_RATE < 16) {
+    // Dynamic tree regrowth rate based on tree count and game progression
+    const treeDensity = trees.length / MAX_TREES; // 0.0 to 1.0
+    const dynamicRegrowthRate = treeDensity < 0.4 ?
+        TREE_REGROWTH_RATE_BASE : // Fast growth when sparse (90 seconds)
+        treeDensity < 0.7 ?
+        TREE_REGROWTH_RATE_BASE * 1.5 : // Medium growth (135 seconds)
+        TREE_REGROWTH_RATE_BASE * 2; // Slow growth when dense (180 seconds)
+
+    if (simulationTime % dynamicRegrowthRate < 16) {
         regrowTrees();
     }
 
