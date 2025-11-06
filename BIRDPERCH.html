@@ -13636,6 +13636,10 @@ class Bush {
         // Visual variety
         this.color = this.generateBushColor();
         this.leafDensity = Math.random(); // For visual variation
+
+        // Cache random values for highlights and accents to prevent jittery rendering
+        this.cachedHighlights = [];
+        this.cachedAccents = [];
     }
 
     generateBushColor() {
@@ -13738,6 +13742,33 @@ class Bush {
         const lightShade = lightenColor(this.color, 40);
         const outlineColor = darkenColor(this.color, 70);
 
+        // Cache highlight and accent positions on first draw to prevent jittery rendering
+        const highlightCount = Math.floor(circleCount * 1.5);
+        const accentCount = circleCount + 2;
+
+        if (this.cachedHighlights.length === 0) {
+            for (let i = 0; i < highlightCount; i++) {
+                const angle = (i / highlightCount) * Math.PI * 2 + Math.PI / 4;
+                const dist = this.width * 0.15 + Math.random() * this.width * 0.15;
+                const highlightRadius = (3 + Math.random() * 4) * this.scale;
+                this.cachedHighlights.push({ angle, dist, radius: highlightRadius });
+            }
+        }
+
+        if (this.cachedAccents.length === 0) {
+            for (let i = 0; i < accentCount; i++) {
+                const angle = (i / accentCount) * Math.PI * 2 - Math.PI / 4;
+                const dist = this.width * 0.2 + Math.random() * this.width * 0.15;
+                const accentRadius = (2 + Math.random() * 3) * this.scale;
+                this.cachedAccents.push({ angle, dist, radius: accentRadius });
+            }
+        }
+
+        // Set clipping region to only show top half of circles (half-circle bushes)
+        ctx.beginPath();
+        ctx.rect(this.x - this.width, drawY - this.height * 1.5, this.width * 2, this.height * 1.5);
+        ctx.clip();
+
         // First pass: Draw background darker shadow circles (flat color)
         ctx.fillStyle = darkShade;
         for (let i = 0; i < circleCount; i++) {
@@ -13771,33 +13802,27 @@ class Bush {
             ctx.stroke();
         }
 
-        // Third pass: Add highlight clusters on top (lighter spots for dimension)
+        // Third pass: Add highlight clusters on top using cached values
         ctx.fillStyle = lightShade;
-        const highlightCount = Math.floor(circleCount * 1.5);
-        for (let i = 0; i < highlightCount; i++) {
-            const angle = (i / highlightCount) * Math.PI * 2 + Math.PI / 4; // Offset for upper-left lighting
-            const dist = this.width * 0.15 + Math.random() * this.width * 0.15;
-            const highlightX = this.x + Math.cos(angle) * dist;
-            const highlightY = drawY + Math.sin(angle) * dist - this.height * 0.1; // Bias upward
-            const highlightRadius = (3 + Math.random() * 4) * this.scale;
+        for (let i = 0; i < this.cachedHighlights.length; i++) {
+            const highlight = this.cachedHighlights[i];
+            const highlightX = this.x + Math.cos(highlight.angle) * highlight.dist;
+            const highlightY = drawY + Math.sin(highlight.angle) * highlight.dist - this.height * 0.1;
 
             ctx.beginPath();
-            ctx.arc(highlightX, highlightY, highlightRadius, 0, Math.PI * 2);
+            ctx.arc(highlightX, highlightY, highlight.radius, 0, Math.PI * 2);
             ctx.fill();
         }
 
-        // Fourth pass: Add darker accent clusters for texture/depth
+        // Fourth pass: Add darker accent clusters using cached values
         ctx.fillStyle = darkShade;
-        const accentCount = circleCount + 2;
-        for (let i = 0; i < accentCount; i++) {
-            const angle = (i / accentCount) * Math.PI * 2 - Math.PI / 4; // Offset for lower-right shadows
-            const dist = this.width * 0.2 + Math.random() * this.width * 0.15;
-            const accentX = this.x + Math.cos(angle) * dist;
-            const accentY = drawY + Math.sin(angle) * dist + this.height * 0.1; // Bias downward
-            const accentRadius = (2 + Math.random() * 3) * this.scale;
+        for (let i = 0; i < this.cachedAccents.length; i++) {
+            const accent = this.cachedAccents[i];
+            const accentX = this.x + Math.cos(accent.angle) * accent.dist;
+            const accentY = drawY + Math.sin(accent.angle) * accent.dist + this.height * 0.1;
 
             ctx.beginPath();
-            ctx.arc(accentX, accentY, accentRadius, 0, Math.PI * 2);
+            ctx.arc(accentX, accentY, accent.radius, 0, Math.PI * 2);
             ctx.fill();
         }
 
