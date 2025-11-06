@@ -6469,9 +6469,11 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 this.colors = colorSchemes[Math.floor(Math.random() * colorSchemes.length)];
                 
                 // Generate slight variation in dimensions
-                this.width *= 0.9 + Math.random() * 0.2;
-                this.height *= 0.9 + Math.random() * 0.2;
-                this.entranceSize *= 0.9 + Math.random() * 0.2;
+                const sizeVariation = 0.9 + Math.random() * 0.2; // Use same variation for proportional scaling
+                this.width *= sizeVariation;
+                this.height *= sizeVariation;
+                this.roofHeight *= sizeVariation; // FIXED: Roof should scale proportionally too!
+                this.entranceSize *= sizeVariation;
             }
             
             addMaterial() {
