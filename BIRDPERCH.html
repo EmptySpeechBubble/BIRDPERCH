@@ -2144,6 +2144,11 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const SILL_APPROACH_DISTANCE = 150; // Start transition when this close to sill
         let quietModeEnabled = false; // 80% reduction in chirping for chill vibe
 
+        // Sill bird melody system
+        let currentSillMelody = null; // Current melody for sill birds to chirp
+        let currentSillMelodyIndex = 0; // Current note index in the melody
+        let lastMelodyHour = -1; // Track hour to change melody
+
         // Garden Diary System
         let diaryEntries = []; // Array of {day: number, event: string, timestamp: number, type: string}
         let birdNames = []; // Pool of bird names
@@ -7155,26 +7160,62 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
                                 debugLog('Woke sleeping sill bird - flying away startled!');
                             } else {
-                                // Normal awake bird click - show cute emoji
-                                const clickEmojis = [
-                                    '💕', '❤️', '💖', '💗', '💓', '💝', // Hearts
-                                    '✨', '⭐', '🌟', '💫', '🌠', // Sparkles
-                                    '🎵', '🎶', '🎼', '♪', '♫', // Music
-                                    '😊', '😍', '🥰', '😘', // Happy faces
-                                    '🌸', '🌺', '🌻', '🌹', '🌷', // Flowers
-                                    '🦋', '🐝', '🌈', '☀️', '🌤️' // Nature
-                                ];
-                                anim.currentEmote = clickEmojis[Math.floor(Math.random() * clickEmojis.length)];
+                                // Normal awake bird click - play next note in melody
+                                // Ensure melody is initialized
+                                if (!currentSillMelody) {
+                                    const allMelodies = getAllMelodies();
+                                    currentSillMelody = allMelodies[Math.floor(Math.random() * allMelodies.length)];
+                                    currentSillMelodyIndex = 0;
+                                    debugLog(`Initialized sill bird melody: "${currentSillMelody.name}"`);
+                                }
+
+                                // Play current note
+                                if (audioContext && !isMuted) {
+                                    const freq = currentSillMelody.notes[currentSillMelodyIndex];
+                                    const duration = currentSillMelody.durations[currentSillMelodyIndex];
+
+                                    const osc = audioContext.createOscillator();
+                                    const gain = audioContext.createGain();
+                                    const filter = audioContext.createBiquadFilter();
+
+                                    osc.type = 'sine';
+                                    osc.frequency.value = freq * 1.5; // Higher pitch for bird voice
+
+                                    filter.type = 'bandpass';
+                                    filter.frequency.value = freq * 1.5;
+                                    filter.Q.value = 4;
+
+                                    osc.connect(filter);
+                                    filter.connect(gain);
+                                    gain.connect(audioContext.destination);
+
+                                    const currentTime = audioContext.currentTime;
+                                    gain.gain.value = 0;
+                                    gain.gain.setValueAtTime(0, currentTime);
+                                    gain.gain.linearRampToValueAtTime(0.12, currentTime + 0.02);
+                                    gain.gain.linearRampToValueAtTime(0, currentTime + duration);
+
+                                    osc.start(currentTime);
+                                    osc.stop(currentTime + duration + 0.01);
+                                }
+
+                                // Show music note emoji
+                                anim.currentEmote = ['♪', '♫', '🎵', '🎶'][Math.floor(Math.random() * 4)];
                                 anim.emoteTimer = 0;
                                 anim.emoteY = 0;
 
-                                // Open beak (chirp)
+                                // Open beak
                                 anim.beakOpen = 1;
 
-                                // Play chirp sound
-                                playChirpSound();
+                                // Move to next note in melody
+                                currentSillMelodyIndex++;
+                                if (currentSillMelodyIndex >= currentSillMelody.notes.length) {
+                                    // Melody complete - loop back to start
+                                    currentSillMelodyIndex = 0;
+                                    debugLog(`Sill bird melody complete, restarting: "${currentSillMelody.name}"`);
+                                }
 
-                                debugLog(`Clicked sill bird - ${anim.currentEmote}!`);
+                                debugLog(`Clicked sill bird - note ${currentSillMelodyIndex}/${currentSillMelody.notes.length} of "${currentSillMelody.name}"`);
                             }
                         }
                         return true;
@@ -21677,6 +21718,21 @@ function spawnOwls() {
             }
         }
 
+        // Check for hour change and update sill bird melody
+        function checkSillBirdMelody() {
+            const now = new Date();
+            const currentHour = now.getHours();
+
+            if (currentHour !== lastMelodyHour) {
+                lastMelodyHour = currentHour;
+                // Change melody each hour
+                const allMelodies = getAllMelodies();
+                currentSillMelody = allMelodies[Math.floor(Math.random() * allMelodies.length)];
+                currentSillMelodyIndex = 0; // Reset to start of melody
+                debugLog(`🎵 New sill bird melody for the hour: "${currentSillMelody.name}"`);
+            }
+        }
+
         // Musical scales for bird chirps (frequencies in Hz)
         const BIRD_SCALES = {
             // Pentatonic scale (very melodic, used in many bird songs)
@@ -23646,6 +23702,9 @@ for (let i = owls.length - 1; i >= 0; i--) {
         drawClock();
         checkHourlyChime(); // Check if it's a new hour and play melody
     }
+
+    // Check for hour change and update sill bird melody (independent of clock)
+    checkSillBirdMelody();
 
     // ===== DEBUG LAYER (very top) =====
     // Draw off-screen indicators in debug mode
