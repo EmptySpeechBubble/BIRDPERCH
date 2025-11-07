@@ -2121,6 +2121,8 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const SILL_PERCH_DURATION_MIN = 60000; // 1 minute minimum
         const SILL_PERCH_DURATION_MAX = 180000; // 3 minutes maximum
         const MAX_SILL_BIRDS = 3; // Maximum birds on sill at once
+        const SILL_TRANSITION_DURATION = 1000; // 1 second transition time (ms)
+        const SILL_APPROACH_DISTANCE = 150; // Start transition when this close to sill
 
         // Garden Diary System
         let diaryEntries = []; // Array of {day: number, event: string, timestamp: number, type: string}
@@ -6279,8 +6281,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.clip();
 
             // Curtain positioned inside the frame
-            const curtainWidth = canvas.width * 0.15; // 15% of screen width (bunched up at sides)
-            const curtainTop = topThickness;
+            const curtainWidth = canvas.width * 0.25; // 25% of screen width (fuller curtains)
+            const curtainTop = topThickness; // Start right at top of frame (no inset)
             const curtainBottom = canvas.height - bottomThickness;
             const curtainHeight = curtainBottom - curtainTop;
 
@@ -6288,8 +6290,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Function to draw one curtain panel with realistic pleats
             function drawCurtainPanel(isLeft) {
-                const panelX = isLeft ? sideThickness : canvas.width - sideThickness - curtainWidth;
-                const pleatCount = 8; // Number of vertical pleats
+                const panelX = isLeft ? sideThickness : canvas.width - sideThickness - curtainWidth; // No inset - stretch to frame edges
+                const pleatCount = 14; // Number of vertical pleats (more pleats = fuller look)
                 const pleatWidth = curtainWidth / pleatCount;
 
                 // First, draw sheer translucent fabric behind the pleats (fills the whole panel area)
@@ -6378,6 +6380,17 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 // Draw curtain rod holder at top (outside clipping region handled below)
             }
 
+            // First, draw semi-transparent layer that stretches to all edges
+            // This ensures curtains always reach the frame edges
+            ctx.fillStyle = `${curtainColor.main}30`; // More visible at 18% opacity (30 in hex)
+
+            // Left side - from frame edge across full curtain width
+            ctx.fillRect(sideThickness, topThickness, curtainWidth, curtainHeight);
+
+            // Right side - from end of pleated curtain to frame edge
+            const rightPanelStart = canvas.width - sideThickness - curtainWidth;
+            ctx.fillRect(rightPanelStart, topThickness, curtainWidth, curtainHeight);
+
             // Draw left curtain panel (inside frame)
             drawCurtainPanel(true);
 
@@ -6391,27 +6404,27 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
             const leftPanelX = sideThickness;
-            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.15);
+            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.25);
             const rodHolderY = topThickness + 5;
 
             // Left rod holder
             ctx.fillStyle = '#8B7355'; // Brass/bronze color
             ctx.beginPath();
-            ctx.arc(leftPanelX + (canvas.width * 0.15) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.arc(leftPanelX + (canvas.width * 0.25) / 2, rodHolderY, 4, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#C9A961';
             ctx.beginPath();
-            ctx.arc(leftPanelX + (canvas.width * 0.15) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.arc(leftPanelX + (canvas.width * 0.25) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
             ctx.fill();
 
             // Right rod holder
             ctx.fillStyle = '#8B7355';
             ctx.beginPath();
-            ctx.arc(rightPanelX + (canvas.width * 0.15) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.arc(rightPanelX + (canvas.width * 0.25) / 2, rodHolderY, 4, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#C9A961';
             ctx.beginPath();
-            ctx.arc(rightPanelX + (canvas.width * 0.15) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.arc(rightPanelX + (canvas.width * 0.25) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
@@ -6424,7 +6437,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             const sideThickness = 40;
             const bottomThickness = 60;
-            const sillY = canvas.height - bottomThickness + 15; // On top of sill
+            const sillY = canvas.height - bottomThickness - 20; // Bumped up higher on sill (about half an inch)
             const usableWidth = canvas.width - (sideThickness * 2);
             const spacing = usableWidth / (SILL_PERCH_COUNT + 1);
 
@@ -6472,10 +6485,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             // Body bob (gentle breathing)
             const bobOffset = Math.sin(anim.bodyBob) * 2;
 
-            // Draw body (round, fluffy)
+            // Draw body (round, fluffy) - made rounder and fluffier for cuteness
             ctx.fillStyle = bodyColor;
             ctx.beginPath();
-            ctx.ellipse(x, y + bobOffset, size * 1.2, size * 1.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(x, y + bobOffset, size * 1.3, size * 1.5, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw wings on sides
@@ -6497,7 +6510,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Draw feet
             const footY = y + size * 1.3 + bobOffset;
-            ctx.strokeStyle = '#8B4513';
+            ctx.strokeStyle = '#FFD700'; // Bright yellow/gold feet (not brown like frame)
             ctx.lineWidth = 2 * scale;
 
             // Left foot (3 toes)
@@ -6525,44 +6538,44 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.translate(x, y - size * 0.6 + bobOffset);
             ctx.rotate(anim.headTilt);
 
-            // Head
+            // Head - bigger and rounder for cuteness
             ctx.fillStyle = bodyColor;
             ctx.beginPath();
-            ctx.arc(0, 0, size * 0.9, 0, Math.PI * 2);
+            ctx.arc(0, 0, size * 1.0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Eyes
+            // Eyes - bigger for cuteness
             const eyeY = -size * 0.2;
-            const eyeSpacing = size * 0.4;
+            const eyeSpacing = size * 0.45;
 
             // Left eye
             ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            ctx.arc(-eyeSpacing, eyeY, size * 0.3, 0, Math.PI * 2);
+            ctx.arc(-eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
             ctx.fill();
 
             // Right eye
             ctx.beginPath();
-            ctx.arc(eyeSpacing, eyeY, size * 0.3, 0, Math.PI * 2);
+            ctx.arc(eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
             ctx.fill();
 
             if (!anim.isBlinking) {
-                // Pupils
+                // Pupils - bigger and rounder (increased size)
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing, eyeY, size * 0.15, 0, Math.PI * 2);
+                ctx.arc(-eyeSpacing, eyeY, size * 0.25, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(eyeSpacing, eyeY, size * 0.15, 0, Math.PI * 2);
+                ctx.arc(eyeSpacing, eyeY, size * 0.25, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Eye highlights
+                // Eye highlights - bigger sparkles
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing - size * 0.05, eyeY - size * 0.05, size * 0.06, 0, Math.PI * 2);
+                ctx.arc(-eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(eyeSpacing - size * 0.05, eyeY - size * 0.05, size * 0.06, 0, Math.PI * 2);
+                ctx.arc(eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
                 ctx.fill();
             } else {
                 // Blinking (closed eyes)
@@ -6578,20 +6591,20 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 ctx.stroke();
             }
 
-            // Beak
+            // Beak - smaller and cuter
             ctx.fillStyle = '#FF8C00';
             ctx.beginPath();
-            ctx.moveTo(0, size * 0.2);
-            ctx.lineTo(-size * 0.15, size * 0.4 + anim.beakOpen * 3);
-            ctx.lineTo(size * 0.15, size * 0.4 + anim.beakOpen * 3);
+            ctx.moveTo(0, size * 0.3);
+            ctx.lineTo(-size * 0.1, size * 0.45 + anim.beakOpen * 3);
+            ctx.lineTo(size * 0.1, size * 0.45 + anim.beakOpen * 3);
             ctx.closePath();
             ctx.fill();
 
             // Upper beak
             ctx.beginPath();
-            ctx.moveTo(0, size * 0.2);
-            ctx.lineTo(-size * 0.15, size * 0.4 - anim.beakOpen * 2);
-            ctx.lineTo(size * 0.15, size * 0.4 - anim.beakOpen * 2);
+            ctx.moveTo(0, size * 0.3);
+            ctx.lineTo(-size * 0.1, size * 0.45 - anim.beakOpen * 2);
+            ctx.lineTo(size * 0.1, size * 0.45 - anim.beakOpen * 2);
             ctx.closePath();
             ctx.fill();
 
@@ -6611,6 +6624,103 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 // Emote
                 ctx.fillStyle = '#000000';
                 ctx.fillText(anim.currentEmote, x, emoteY);
+            }
+
+            ctx.restore();
+        }
+
+        // Draw bird during transition to/from sill
+        function drawBirdInTransition(bird) {
+            if (!bird.sillTransitionProgress) return;
+
+            const progress = bird.sillTransitionProgress; // 0 = flying, 1 = on sill
+            const isLeaving = bird.sillTransitionDirection === 'leaving';
+            const effectiveProgress = isLeaving ? (1 - progress) : progress;
+
+            ctx.save();
+
+            // Interpolate position
+            const screenX = bird.x;
+            const screenY = bird.y;
+
+            // Interpolate scale (1x to 3x)
+            const scale = 1 + (effectiveProgress * (SILL_BIRD_SCALE - 1));
+
+            // Interpolate rotation (0 to 90 degrees for side to frontal)
+            const rotation = effectiveProgress * Math.PI / 2;
+
+            // Move to bird position
+            ctx.translate(screenX, screenY);
+            ctx.scale(scale, scale);
+
+            // Apply rotation around Y-axis (simulated with skew/scale)
+            // This creates illusion of 3D rotation from side view to frontal view
+            const rotationFactor = Math.cos(rotation);
+            ctx.scale(Math.abs(rotationFactor) + 0.3, 1); // Prevent complete flatness
+
+            // Decide which drawing method to use based on progress
+            if (effectiveProgress < 0.5) {
+                // More side view - use normal bird drawing (but simplified)
+                const sizeMultiplier = bird.birdType.sizeMultiplier;
+                const bodyColor = bird.isRareVariant ? bird.rareVariant.bodyColor : bird.birdType.bodyColor;
+                const wingColor = bird.isRareVariant ? bird.rareVariant.wingColor : bird.birdType.wingColor;
+
+                // Draw simple side-view bird
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 12 * sizeMultiplier, 10 * sizeMultiplier, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Wings
+                ctx.fillStyle = wingColor;
+                ctx.beginPath();
+                ctx.ellipse(-5, 0, 8 * sizeMultiplier, 6 * sizeMultiplier, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // More frontal view - use frontal bird appearance
+                const size = 12;
+                const bodyColor = bird.isRareVariant ? bird.rareVariant.bodyColor : bird.birdType.bodyColor;
+                const wingColor = bird.isRareVariant ? bird.rareVariant.wingColor : bird.birdType.wingColor;
+
+                // Body (frontal, simplified)
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, size * 1.3, size * 1.5, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Wings on sides
+                ctx.fillStyle = wingColor;
+                ctx.beginPath();
+                ctx.ellipse(-size * 0.9, 0, size * 0.5, size * 0.8, -0.3, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(size * 0.9, 0, size * 0.5, size * 0.8, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Head
+                ctx.fillStyle = bodyColor;
+                ctx.beginPath();
+                ctx.arc(0, -size * 0.6, size * 1.0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Eyes
+                const eyeSpacing = size * 0.45;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing, -size * 0.8, size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(eyeSpacing, -size * 0.8, size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pupils
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-eyeSpacing, -size * 0.8, size * 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(eyeSpacing, -size * 0.8, size * 0.2, 0, Math.PI * 2);
+                ctx.fill();
             }
 
             ctx.restore();
@@ -6694,31 +6804,87 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
         function updateAndDrawSillBirds(deltaTime) {
             if (!windowSillEnabled) return;
 
+            // First, draw birds in transition (outside camera space)
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Screen space for transitions
+            for (const bird of birds) {
+                if (bird.sillTransitionProgress) {
+                    // Update transition progress
+                    const transitionSpeed = deltaTime / SILL_TRANSITION_DURATION;
+
+                    if (bird.sillTransitionDirection === 'approaching') {
+                        bird.sillTransitionProgress += transitionSpeed;
+
+                        if (bird.sillTransitionProgress >= 1) {
+                            // Transition complete - bird is now on sill
+                            bird.sillTransitionProgress = 0;
+                            bird.sillTransitionDirection = null;
+                            bird.isOnSill = true;
+                            bird.state = BIRD_STATES.PERCHED;
+                            debugLog('Bird landed on sill');
+                        } else {
+                            // Draw bird in transition
+                            drawBirdInTransition(bird);
+                        }
+                    } else if (bird.sillTransitionDirection === 'leaving') {
+                        bird.sillTransitionProgress += transitionSpeed;
+
+                        if (bird.sillTransitionProgress >= 1) {
+                            // Transition complete - bird is flying again
+                            bird.sillTransitionProgress = 0;
+                            bird.sillTransitionDirection = null;
+                            bird.isOnSill = false;
+                            debugLog('Bird completed leaving transition');
+                        } else {
+                            // Draw bird in transition
+                            drawBirdInTransition(bird);
+                        }
+                    }
+                }
+            }
+            ctx.restore();
+
+            // Then, draw birds fully on sill
             for (const spot of sillPerchSpots) {
                 if (spot.occupied && spot.bird) {
+                    const bird = spot.bird;
+
+                    // Skip if bird is in transition
+                    if (bird.sillTransitionProgress) continue;
+
                     // Update animation
-                    updateSillBirdAnimation(spot.bird, deltaTime);
+                    updateSillBirdAnimation(bird, deltaTime);
 
                     // Check if bird should leave
-                    if (!spot.bird.sillPerchStartTime) {
-                        spot.bird.sillPerchStartTime = Date.now();
-                        spot.bird.sillPerchDuration = SILL_PERCH_DURATION_MIN +
+                    if (!bird.sillPerchStartTime) {
+                        bird.sillPerchStartTime = Date.now();
+                        bird.sillPerchDuration = SILL_PERCH_DURATION_MIN +
                             Math.random() * (SILL_PERCH_DURATION_MAX - SILL_PERCH_DURATION_MIN);
                     }
 
-                    if (Date.now() - spot.bird.sillPerchStartTime > spot.bird.sillPerchDuration) {
-                        // Bird leaves sill
-                        spot.bird.isOnSill = false;
-                        spot.bird.sillPerchStartTime = null;
-                        spot.bird.sillAnimation = null;
-                        spot.bird.state = BIRD_STATES.FLYING;
-                        spot.bird.stateTimer = 0;
+                    if (Date.now() - bird.sillPerchStartTime > bird.sillPerchDuration) {
+                        // Start leaving transition
+                        bird.sillTransitionProgress = 0;
+                        bird.sillTransitionDirection = 'leaving';
+                        bird.sillPerchStartTime = null;
+                        bird.sillAnimation = null;
+                        bird.state = BIRD_STATES.FLYING;
+                        bird.stateTimer = 0;
+
+                        // Generate flight path away from sill
+                        const targetX = Math.random() < 0.5 ? canvas.width * 0.3 : canvas.width * 0.7;
+                        const targetY = canvas.height * 0.4;
+                        bird.generatePath(targetX, targetY);
+
                         spot.occupied = false;
                         spot.bird = null;
-                        debugLog('Bird left window sill');
+                        debugLog('Bird starting to leave window sill');
                     } else {
-                        // Draw the bird
-                        drawSillBirdFrontal(spot.bird, spot.x, spot.y, SILL_BIRD_SCALE);
+                        // Draw the bird fully on sill
+                        ctx.save();
+                        ctx.setTransform(1, 0, 0, 1, 0, 0); // Screen space
+                        drawSillBirdFrontal(bird, spot.x, spot.y, SILL_BIRD_SCALE);
+                        ctx.restore();
                     }
                 }
             }
@@ -6738,8 +6904,16 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         // Clicked on sill bird!
                         const anim = spot.bird.sillAnimation;
                         if (anim) {
-                            // Show hearts
-                            anim.currentEmote = '💕';
+                            // Show random cute emoji
+                            const clickEmojis = [
+                                '💕', '❤️', '💖', '💗', '💓', '💝', // Hearts
+                                '✨', '⭐', '🌟', '💫', '🌠', // Sparkles
+                                '🎵', '🎶', '🎼', '♪', '♫', // Music
+                                '😊', '😍', '🥰', '😘', // Happy faces
+                                '🌸', '🌺', '🌻', '🌹', '🌷', // Flowers
+                                '🦋', '🐝', '🌈', '☀️', '🌤️' // Nature
+                            ];
+                            anim.currentEmote = clickEmojis[Math.floor(Math.random() * clickEmojis.length)];
                             anim.emoteTimer = 0;
                             anim.emoteY = 0;
 
@@ -6749,7 +6923,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                             // Play chirp sound
                             playChirpSound();
 
-                            debugLog('Clicked sill bird - hearts!');
+                            debugLog(`Clicked sill bird - ${anim.currentEmote}!`);
                         }
                         return true;
                     }
@@ -11075,12 +11249,26 @@ if (timeOfDay < 1 && Math.random() < 0.001) {
                 this.acceleration = { x: 0, y: 0 };
                 
                 // Check if non-wild bird has a nest that needs maintenance
-                if (!this.isWild && this.myNest && this.myNest.needsMaintenance && 
+                if (!this.isWild && this.myNest && this.myNest.needsMaintenance &&
                     this.state !== BIRD_STATES.BUILDING && Math.random() < 0.02) {
                     // Higher chance to check nest condition
                     if (this.checkNestCondition()) {
                         // Will transition to maintenance
                         return false; // Skip other state checks
+                    }
+                }
+
+                // Check if bird is approaching sill and should start transition
+                if (windowSillEnabled && this.sillTargetSpot && this.sillTransitionDirection === 'approaching') {
+                    const distToTarget = Math.sqrt(
+                        Math.pow(this.x - this.sillTargetSpot.x, 2) +
+                        Math.pow(this.y - this.sillTargetSpot.y, 2)
+                    );
+
+                    // Start transition when close to target
+                    if (distToTarget < SILL_APPROACH_DISTANCE && this.sillTransitionProgress === 0) {
+                        this.sillTransitionProgress = 0.01; // Start transition
+                        debugLog(`Bird starting sill transition at distance ${distToTarget.toFixed(1)}`);
                     }
                 }
 
@@ -12671,31 +12859,77 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 debugLog(`Bird finished bathing, now preening`);
                             }
                         } else {
-                            // FIX: Move toward water source (puddle or pond)
-                            const dx = nearestWater.x - this.x;
-                            const dy = nearestWater.y - this.y;
-                            const dir = normalize(dx, dy);
+                            // FIX: Follow path to water source, or fly toward it if no path
+                            if (this.path && this.path.length > 0 && this.pathIndex < this.path.length) {
+                                // Follow the path we generated
+                                const waypoint = this.path[this.pathIndex];
+                                const waypointDist = distance(this.x, this.y, waypoint.x, waypoint.y);
 
-                            this.applyForce({
-                                x: dir.x * 0.01,
-                                y: dir.y * 0.01
-                            });
+                                if (waypointDist < 30) {
+                                    // Reached waypoint
+                                    this.pathIndex++;
+                                }
 
-                            // Face direction of movement
-                            if (Math.abs(dx) > 2) {
-                                this.direction = dx > 0 ? 1 : -1;
+                                if (this.pathIndex >= this.path.length) {
+                                    // Reached end of path, regenerate if still far from water
+                                    if (minDist > bathingRadius) {
+                                        this.generatePath(nearestWater.x, nearestWater.y, true);
+                                        this.pathIndex = 0;
+                                    }
+                                } else {
+                                    // Fly toward waypoint
+                                    const dx = waypoint.x - this.x;
+                                    const dy = waypoint.y - this.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                    if (dist > 0) {
+                                        const forceStrength = Math.min(0.15, dist * 0.001);
+                                        this.applyForce({
+                                            x: (dx / dist) * forceStrength,
+                                            y: (dy / dist) * forceStrength
+                                        });
+                                    }
+                                }
+                            } else {
+                                // No path, fly directly toward water
+                                const dx = nearestWater.x - this.x;
+                                const dy = nearestWater.y - this.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                if (dist > 0) {
+                                    const forceStrength = Math.min(0.15, dist * 0.001);
+                                    this.applyForce({
+                                        x: (dx / dist) * forceStrength,
+                                        y: (dy / dist) * forceStrength
+                                    });
+                                }
                             }
 
-                            // If taking too long to reach water, give up
-                            if (this.stateTimer > 5000) {
-                                this.state = BIRD_STATES.FLYING;
-                                this.stateTimer = 0;
-                                
-                                // Fly somewhere else
-                                this.generatePath(
-                                    Math.random() * canvas.width,
-                                    100 + Math.random() * (canvas.height * 0.3)
-                                );
+                            // Face direction of movement
+                            if (Math.abs(this.velocity.x) > 0.5) {
+                                this.direction = this.velocity.x > 0 ? 1 : -1;
+                            }
+
+                            // If taking too long to reach water, give up and regenerate path
+                            if (this.stateTimer > 8000) {
+                                // Try once more with a fresh path
+                                if (this.stateTimer < 10000) {
+                                    this.generatePath(nearestWater.x, nearestWater.y, true);
+                                    this.pathIndex = 0;
+                                    debugLog('Bird struggling to reach water, regenerating path');
+                                } else {
+                                    // Give up entirely
+                                    this.state = BIRD_STATES.FLYING;
+                                    this.stateTimer = 0;
+                                    this.bathingStarted = false;
+
+                                    // Fly somewhere else
+                                    this.generatePath(
+                                        Math.random() * canvas.width,
+                                        100 + Math.random() * (canvas.height * 0.3)
+                                    );
+                                    debugLog('Bird gave up trying to reach water');
+                                }
                             }
                         }
                         break;
@@ -12828,18 +13062,66 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 }
                             }
                         } else {
-                            // Move toward water
-                            const dx = nearestWater.x - this.x;
-                            const dy = nearestWater.y - this.y;
-                            const dir = normalize(dx, dy);
+                            // FIX: Follow path to water source, or fly toward it if no path
+                            if (this.path && this.path.length > 0 && this.pathIndex < this.path.length) {
+                                // Follow the path we generated
+                                const waypoint = this.path[this.pathIndex];
+                                const waypointDist = distance(this.x, this.y, waypoint.x, waypoint.y);
 
-                            this.applyForce({
-                                x: dir.x * 0.015,
-                                y: dir.y * 0.01
-                            });
+                                if (waypointDist < 30) {
+                                    // Reached waypoint
+                                    this.pathIndex++;
+                                }
 
-                            if (Math.abs(dx) > 2) {
-                                this.direction = dx > 0 ? 1 : -1;
+                                if (this.pathIndex >= this.path.length) {
+                                    // Reached end of path, regenerate if still far from water
+                                    if (waterDist > 15) {
+                                        this.generatePath(nearestWater.x, nearestWater.y, true);
+                                        this.pathIndex = 0;
+                                    }
+                                } else {
+                                    // Fly toward waypoint
+                                    const dx = waypoint.x - this.x;
+                                    const dy = waypoint.y - this.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                    if (dist > 0) {
+                                        const forceStrength = Math.min(0.15, dist * 0.001);
+                                        this.applyForce({
+                                            x: (dx / dist) * forceStrength,
+                                            y: (dy / dist) * forceStrength
+                                        });
+                                    }
+                                }
+                            } else {
+                                // No path, fly directly toward water with stronger force
+                                const dx = nearestWater.x - this.x;
+                                const dy = nearestWater.y - this.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                if (dist > 0) {
+                                    const forceStrength = Math.min(0.15, dist * 0.001);
+                                    this.applyForce({
+                                        x: (dx / dist) * forceStrength,
+                                        y: (dy / dist) * forceStrength
+                                    });
+                                }
+                            }
+
+                            // Face direction of movement
+                            if (Math.abs(this.velocity.x) > 0.5) {
+                                this.direction = this.velocity.x > 0 ? 1 : -1;
+                            }
+
+                            // If taking too long, give up
+                            if (this.stateTimer > 8000) {
+                                this.state = BIRD_STATES.FLYING;
+                                this.stateTimer = 0;
+                                this.generatePath(
+                                    Math.random() * canvas.width,
+                                    100 + Math.random() * (canvas.height * 0.3)
+                                );
+                                debugLog('Bird gave up trying to reach water for drinking');
                             }
                         }
                         break;
@@ -12997,6 +13279,26 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                         // V26: Additional damping for flying state to prevent excessive acceleration
                         this.velocity.x *= 0.97; // More damping
                         this.velocity.y *= 0.97; // More damping
+
+                        // NEW: Check if bird should land on window sill
+                        if (windowSillEnabled && !this.isWild && !this.sillTargetSpot && Math.random() < SILL_PERCH_CHANCE * 0.001) {
+                            const availableSpots = sillPerchSpots.filter(spot => !spot.occupied);
+                            const sillBirdCount = sillPerchSpots.filter(spot => spot.occupied).length;
+
+                            if (availableSpots.length > 0 && sillBirdCount < MAX_SILL_BIRDS) {
+                                // Choose sill perching!
+                                const chosenSpot = availableSpots[Math.floor(Math.random() * availableSpots.length)];
+                                chosenSpot.occupied = true;
+                                chosenSpot.bird = this;
+
+                                this.sillTransitionProgress = 0;
+                                this.sillTransitionDirection = 'approaching';
+                                this.sillTargetSpot = chosenSpot;
+                                this.generatePath(chosenSpot.x, chosenSpot.y);
+                                debugLog(`${this.birdType.name} decided to perch on window sill`);
+                                break; // Skip other flying behaviors this frame
+                            }
+                        }
 
                         // NEW: Calm behavior - birds should land on ground when flying near it
                         const groundY = canvas.height * GROUND_HEIGHT_RATIO;
@@ -22996,7 +23298,10 @@ drawAnts();
             }
             birds.splice(i, 1);
         } else {
-            birds[i].draw();
+            // Don't draw birds that are on the sill (they're drawn separately in frontal view)
+            if (!birds[i].isOnSill && !birds[i].sillTransitionProgress) {
+                birds[i].draw();
+            }
         }
     }
 
@@ -25041,15 +25346,17 @@ spawnSillBirdBtn.addEventListener('click', () => {
     chosenSpot.occupied = true;
     chosenSpot.bird = bird;
 
-    // Set bird to sill mode
-    bird.isOnSill = true;
-    bird.state = BIRD_STATES.PERCHED;
+    // Start transition to sill
+    bird.sillTransitionProgress = 0;
+    bird.sillTransitionDirection = 'approaching';
+    bird.sillTargetSpot = chosenSpot;
+    bird.state = BIRD_STATES.FLYING;
     bird.stateTimer = 0;
 
     // Fly to sill spot
     bird.generatePath(chosenSpot.x, chosenSpot.y);
 
-    debugLog(`Spawned bird on window sill at position ${sillBirdCount + 1}`);
+    debugLog(`Bird approaching window sill at position ${sillBirdCount + 1}`);
 });
 
 // Test all chirp types
