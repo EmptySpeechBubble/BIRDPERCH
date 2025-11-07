@@ -6832,6 +6832,20 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 ctx.fill();
             }
 
+            // Draw emote if present (like "!" when startled)
+            if (bird.sillAnimation && bird.sillAnimation.currentEmote) {
+                const anim = bird.sillAnimation;
+                const opacity = Math.max(0, 1 - anim.emoteTimer / 2000);
+                const emoteScale = effectiveProgress < 0.5 ? 1 : SILL_BIRD_SCALE; // Use sill scale when near sill
+                ctx.globalAlpha = opacity;
+                ctx.font = `${24 * emoteScale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#FF0000'; // Red for "!" emote
+                ctx.fillText(anim.currentEmote, 0, -40 * emoteScale - anim.emoteY);
+                ctx.globalAlpha = 1;
+            }
+
             ctx.restore();
         }
 
@@ -6967,6 +6981,11 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.setTransform(1, 0, 0, 1, 0, 0); // Screen space for transitions
             for (const bird of birds) {
                 if (bird.sillTransitionProgress) {
+                    // Update sill bird animation (for emotes during transition)
+                    if (bird.sillAnimation) {
+                        updateSillBirdAnimation(bird, deltaTime);
+                    }
+
                     // Update transition progress
                     const transitionSpeed = deltaTime / SILL_TRANSITION_DURATION;
 
@@ -7152,25 +7171,19 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         if (anim) {
                             // Check if sleeping
                             if (anim.isSleeping) {
-                                // Wake up startled - show "!" then leave
+                                // Wake up startled - show "!" and fly away
                                 const bird = spot.bird;
 
-                                // Brief "!" emote before leaving
-                                // Draw it immediately using canvas
-                                ctx.save();
-                                ctx.setTransform(1, 0, 0, 1, 0, 0); // Screen space
-                                ctx.font = `${24 * SILL_BIRD_SCALE}px Arial`;
-                                ctx.textAlign = 'center';
-                                ctx.textBaseline = 'middle';
-                                ctx.fillStyle = '#FF0000';
-                                ctx.fillText('!', spot.x, spot.y - 50);
-                                ctx.restore();
+                                // Show "!" emote in animation system so it displays
+                                anim.isSleeping = false; // Wake up first
+                                anim.currentEmote = '!';
+                                anim.emoteTimer = 0;
+                                anim.emoteY = 0;
 
                                 // Start leaving transition (same as natural departure)
                                 bird.sillTransitionProgress = 0;
                                 bird.sillTransitionDirection = 'leaving';
                                 bird.sillPerchStartTime = null;
-                                bird.sillAnimation = null;
                                 bird.state = BIRD_STATES.FLYING;
                                 bird.stateTimer = 0;
 
