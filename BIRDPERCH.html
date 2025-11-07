@@ -6504,6 +6504,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Bird animation states
             if (!bird.sillAnimation) {
+                const shouldBeSleeping = bird.shouldSleepOnSill || false;
                 bird.sillAnimation = {
                     blinkTimer: 0,
                     blinkDuration: 100,
@@ -6522,12 +6523,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     rightFootUp: false,
                     footShuffleTimer: 0,
                     emoteTimer: 0,
-                    currentEmote: null,
+                    currentEmote: shouldBeSleeping ? '💤' : null,
                     emoteY: 0,
-                    isSleeping: false,
-                    sleepStartTime: 0,
+                    isSleeping: shouldBeSleeping,
+                    sleepStartTime: shouldBeSleeping ? Date.now() : 0,
                     zzzTimer: 0
                 };
+                bird.shouldSleepOnSill = false; // Clear flag after use
             }
 
             const anim = bird.sillAnimation;
