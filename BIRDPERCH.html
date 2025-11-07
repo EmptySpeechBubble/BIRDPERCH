@@ -7243,6 +7243,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                                 // Open beak
                                 anim.beakOpen = 1;
 
+                                // Debug message for played note (before incrementing)
+                                debugLog(`Clicked sill bird - played note ${currentSillMelodyIndex + 1}/${currentSillMelody.notes.length} of "${currentSillMelody.name}"`);
+
                                 // Move to next note in melody
                                 currentSillMelodyIndex++;
                                 if (currentSillMelodyIndex >= currentSillMelody.notes.length) {
@@ -7250,8 +7253,6 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                                     currentSillMelodyIndex = 0;
                                     debugLog(`Sill bird melody complete, restarting: "${currentSillMelody.name}"`);
                                 }
-
-                                debugLog(`Clicked sill bird - note ${currentSillMelodyIndex}/${currentSillMelody.notes.length} of "${currentSillMelody.name}"`);
                             }
                         }
                         return true;
