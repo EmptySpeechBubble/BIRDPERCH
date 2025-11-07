@@ -6573,13 +6573,13 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.fill();
 
             if (!anim.isBlinking) {
-                // Pupils - bigger and rounder (increased size)
+                // Pupils - very large anime-style (almost no white showing)
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing, eyeY, size * 0.25, 0, Math.PI * 2);
+                ctx.arc(-eyeSpacing, eyeY, size * 0.37, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(eyeSpacing, eyeY, size * 0.25, 0, Math.PI * 2);
+                ctx.arc(eyeSpacing, eyeY, size * 0.37, 0, Math.PI * 2);
                 ctx.fill();
 
                 // Eye highlights - bigger sparkles
