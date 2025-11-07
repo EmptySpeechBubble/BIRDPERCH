@@ -6383,7 +6383,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // First, draw semi-transparent layer that stretches nearly to edges
             // This ensures curtains look full while staying clearly inside frame
-            ctx.fillStyle = `${curtainColor.main}30`; // More visible at 18% opacity (30 in hex)
+            ctx.fillStyle = `${curtainColor.main}40`; // 25% opacity (40 in hex)
 
             // Left side - with small inset from frame edge
             ctx.fillRect(sideThickness + curtainInset, curtainTop, curtainWidth, curtainHeight);
