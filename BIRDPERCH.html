@@ -7109,22 +7109,34 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         if (anim) {
                             // Check if sleeping
                             if (anim.isSleeping) {
-                                // Wake up startled!
-                                anim.isSleeping = false;
-                                anim.sleepStartTime = 0;
+                                // Wake up startled - show "!" then leave
+                                const bird = spot.bird;
 
-                                // Show startled emoji
-                                anim.currentEmote = '!';
-                                anim.emoteTimer = 0;
-                                anim.emoteY = 0;
+                                // Brief "!" emote before leaving
+                                // Draw it immediately using canvas
+                                ctx.save();
+                                ctx.setTransform(1, 0, 0, 1, 0, 0); // Screen space
+                                ctx.font = `${24 * SILL_BIRD_SCALE}px Arial`;
+                                ctx.textAlign = 'center';
+                                ctx.textBaseline = 'middle';
+                                ctx.fillStyle = '#FF0000';
+                                ctx.fillText('!', spot.x, spot.y - 50);
+                                ctx.restore();
 
-                                // Make bird fly away
-                                spot.bird.isOnSill = false;
-                                spot.bird.sillSpot = null;
-                                spot.bird.sillPerchTimer = 0;
-                                spot.bird.sillTransitionProgress = 0;
-                                spot.bird.sillTransitionDirection = 'leaving';
-                                spot.bird.sillAnimation = null;
+                                // Start leaving transition (same as natural departure)
+                                bird.sillTransitionProgress = 0;
+                                bird.sillTransitionDirection = 'leaving';
+                                bird.sillPerchStartTime = null;
+                                bird.sillAnimation = null;
+                                bird.state = BIRD_STATES.FLYING;
+                                bird.stateTimer = 0;
+
+                                // Generate flight path away from sill
+                                const targetX = Math.random() < 0.5 ? canvas.width * 0.3 : canvas.width * 0.7;
+                                const targetY = canvas.height * 0.4;
+                                bird.generatePath(targetX, targetY);
+
+                                // Clear spot so another bird can land
                                 spot.occupied = false;
                                 spot.bird = null;
 
@@ -23635,9 +23647,9 @@ for (let i = owls.length - 1; i >= 0; i--) {
     }
 
     // Draw window sill and curtains (on top of everything, no camera transform)
-    drawWindowSill(); // Draw frame first (curtains will be on top from inside house POV)
-    drawCurtains(); // Draw curtains on top (inside the house, covering frame sides)
-    updateAndDrawSillBirds(deltaTime); // Draw sill-perching birds (on top of sill)
+    drawWindowSill(); // Draw frame first
+    updateAndDrawSillBirds(deltaTime); // Draw sill-perching birds
+    drawCurtains(); // Draw curtains on top (birds should be under curtains)
 
     // ===== PERIODIC UPDATES =====
     // Do periodic spawning and checks
