@@ -6280,9 +6280,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             );
             ctx.clip();
 
-            // Curtain positioned inside the frame
+            // Curtain positioned inside the frame (with small inset to stay clearly inside frame)
+            const curtainInset = 5; // Small inset so curtains don't appear under frame edges
             const curtainWidth = canvas.width * 0.25; // 25% of screen width (fuller curtains)
-            const curtainTop = topThickness; // Start right at top of frame (no inset)
+            const curtainTop = topThickness + curtainInset;
             const curtainBottom = canvas.height - bottomThickness;
             const curtainHeight = curtainBottom - curtainTop;
 
@@ -6290,7 +6291,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Function to draw one curtain panel with realistic pleats
             function drawCurtainPanel(isLeft) {
-                const panelX = isLeft ? sideThickness : canvas.width - sideThickness - curtainWidth; // No inset - stretch to frame edges
+                const panelX = isLeft ? sideThickness + curtainInset : canvas.width - sideThickness - curtainWidth - curtainInset;
                 const pleatCount = 14; // Number of vertical pleats (more pleats = fuller look)
                 const pleatWidth = curtainWidth / pleatCount;
 
@@ -6380,16 +6381,16 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 // Draw curtain rod holder at top (outside clipping region handled below)
             }
 
-            // First, draw semi-transparent layer that stretches to all edges
-            // This ensures curtains always reach the frame edges
+            // First, draw semi-transparent layer that stretches nearly to edges
+            // This ensures curtains look full while staying clearly inside frame
             ctx.fillStyle = `${curtainColor.main}30`; // More visible at 18% opacity (30 in hex)
 
-            // Left side - from frame edge across full curtain width
-            ctx.fillRect(sideThickness, topThickness, curtainWidth, curtainHeight);
+            // Left side - with small inset from frame edge
+            ctx.fillRect(sideThickness + curtainInset, curtainTop, curtainWidth, curtainHeight);
 
-            // Right side - from end of pleated curtain to frame edge
-            const rightPanelStart = canvas.width - sideThickness - curtainWidth;
-            ctx.fillRect(rightPanelStart, topThickness, curtainWidth, curtainHeight);
+            // Right side - with small inset from frame edge
+            const rightPanelStart = canvas.width - sideThickness - curtainWidth - curtainInset;
+            ctx.fillRect(rightPanelStart, curtainTop, curtainWidth, curtainHeight);
 
             // Draw left curtain panel (inside frame)
             drawCurtainPanel(true);
@@ -6403,9 +6404,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-            const leftPanelX = sideThickness;
-            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.25);
-            const rodHolderY = topThickness + 5;
+            const curtainInsetForRods = 5; // Match curtain inset
+            const leftPanelX = sideThickness + curtainInsetForRods;
+            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.25) - curtainInsetForRods;
+            const rodHolderY = topThickness + curtainInsetForRods + 5;
 
             // Left rod holder
             ctx.fillStyle = '#8B7355'; // Brass/bronze color
