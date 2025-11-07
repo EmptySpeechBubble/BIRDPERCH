@@ -6265,33 +6265,22 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to screen space
 
-            // Frame dimensions (if frame is enabled)
-            const sideThickness = windowSillEnabled ? 40 : 0;
-            const topThickness = windowSillEnabled ? 30 : 0;
-            const bottomThickness = windowSillEnabled ? 60 : 0;
-
-            // Create clipping region (frame area if enabled, or full screen if not)
-            ctx.beginPath();
-            ctx.rect(
-                sideThickness,
-                topThickness,
-                canvas.width - (sideThickness * 2),
-                canvas.height - topThickness - bottomThickness
-            );
-            ctx.clip();
-
-            // Curtain positioned inside the frame (with small inset to stay clearly inside frame)
-            const curtainInset = 5; // Small inset so curtains don't appear under frame edges
+            // Curtains stretch full height top to bottom (frame or no frame)
+            // They are "inside the house" so they cover the frame sides
             const curtainWidth = canvas.width * 0.25; // 25% of screen width (fuller curtains)
-            const curtainTop = topThickness + curtainInset;
-            const curtainBottom = canvas.height - bottomThickness;
+            const curtainTop = 0; // Full height from top
+            const curtainBottom = canvas.height; // Full height to bottom
             const curtainHeight = curtainBottom - curtainTop;
 
             const swayAmount = Math.sin(curtainSwayOffset) * 3; // Gentle sway
 
+            // Frame dimensions (if frame is enabled) - curtains will overlap the frame sides
+            const sideThickness = windowSillEnabled ? 40 : 0;
+
             // Function to draw one curtain panel with realistic pleats
             function drawCurtainPanel(isLeft) {
-                const panelX = isLeft ? sideThickness + curtainInset : canvas.width - sideThickness - curtainWidth - curtainInset;
+                // Position curtains at screen edges - they will cover/overlap the frame sides
+                const panelX = isLeft ? 0 : canvas.width - curtainWidth;
                 const pleatCount = 14; // Number of vertical pleats (more pleats = fuller look)
                 const pleatWidth = curtainWidth / pleatCount;
 
@@ -6381,52 +6370,46 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 // Draw curtain rod holder at top (outside clipping region handled below)
             }
 
-            // First, draw semi-transparent layer that stretches nearly to edges
-            // This ensures curtains look full while staying clearly inside frame
+            // First, draw semi-transparent layer for fullness
             ctx.fillStyle = `${curtainColor.main}40`; // 25% opacity (40 in hex)
 
-            // Left side - with small inset from frame edge
-            ctx.fillRect(sideThickness + curtainInset, curtainTop, curtainWidth, curtainHeight);
+            // Left side - full height from screen edge
+            ctx.fillRect(0, curtainTop, curtainWidth, curtainHeight);
 
-            // Right side - with small inset from frame edge
-            const rightPanelStart = canvas.width - sideThickness - curtainWidth - curtainInset;
-            ctx.fillRect(rightPanelStart, curtainTop, curtainWidth, curtainHeight);
+            // Right side - full height from screen edge
+            ctx.fillRect(canvas.width - curtainWidth, curtainTop, curtainWidth, curtainHeight);
 
-            // Draw left curtain panel (inside frame)
+            // Draw left curtain panel
             drawCurtainPanel(true);
 
-            // Draw right curtain panel (inside frame)
+            // Draw right curtain panel
             drawCurtainPanel(false);
 
-            ctx.restore(); // Restore removes clipping
+            // Draw curtain rod holders at the top
+            const rodHolderY = 10; // Near top of screen
 
-            // Draw curtain rod holders AFTER clipping is removed (so they show on top of frame)
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-            const curtainInsetForRods = 5; // Match curtain inset
-            const leftPanelX = sideThickness + curtainInsetForRods;
-            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.25) - curtainInsetForRods;
-            const rodHolderY = topThickness + curtainInsetForRods + 5;
+            // Left rod holder (centered on left curtain)
+            const leftRodX = curtainWidth / 2;
+            const rightRodX = canvas.width - curtainWidth / 2;
 
             // Left rod holder
             ctx.fillStyle = '#8B7355'; // Brass/bronze color
             ctx.beginPath();
-            ctx.arc(leftPanelX + (canvas.width * 0.25) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.arc(leftRodX, rodHolderY, 4, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#C9A961';
             ctx.beginPath();
-            ctx.arc(leftPanelX + (canvas.width * 0.25) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.arc(leftRodX - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
             ctx.fill();
 
             // Right rod holder
             ctx.fillStyle = '#8B7355';
             ctx.beginPath();
-            ctx.arc(rightPanelX + (canvas.width * 0.25) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.arc(rightRodX, rodHolderY, 4, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#C9A961';
             ctx.beginPath();
-            ctx.arc(rightPanelX + (canvas.width * 0.25) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.arc(rightRodX - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
@@ -23410,8 +23393,8 @@ for (let i = owls.length - 1; i >= 0; i--) {
     }
 
     // Draw window sill and curtains (on top of everything, no camera transform)
-    drawCurtains(); // Draw curtains first (behind sill)
-    drawWindowSill(); // Draw sill on top
+    drawWindowSill(); // Draw frame first (curtains will be on top from inside house POV)
+    drawCurtains(); // Draw curtains on top (inside the house, covering frame sides)
     updateAndDrawSillBirds(deltaTime); // Draw sill-perching birds (on top of sill)
 
     // ===== PERIODIC UPDATES =====
