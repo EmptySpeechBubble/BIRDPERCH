@@ -6480,6 +6480,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     isBlinking: false,
                     headTilt: 0,
                     headTiltDirection: 1,
+                    headTurnAngle: 0,  // 0 = forward, -1 = full left, 1 = full right
+                    headTurnTarget: 0,
+                    headTurnTimer: 0,
                     bodyBob: 0,
                     bodyBobSpeed: 0.001,
                     beakOpen: 0,
@@ -6560,66 +6563,120 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             // Eyes - bigger for cuteness
             const eyeY = -size * 0.2;
             const eyeSpacing = size * 0.45;
+            const turnAmount = Math.abs(anim.headTurnAngle);
 
-            // Left eye
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.arc(-eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
-            ctx.fill();
+            // Determine if showing side view (turned > 0.6)
+            const isSideView = turnAmount > 0.6;
+            const turnDirection = anim.headTurnAngle > 0 ? 1 : -1; // 1 = right, -1 = left
 
-            // Right eye
-            ctx.beginPath();
-            ctx.arc(eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
-            ctx.fill();
-
-            if (!anim.isBlinking) {
-                // Pupils - very large anime-style (almost no white showing)
-                ctx.fillStyle = '#000000';
-                ctx.beginPath();
-                ctx.arc(-eyeSpacing, eyeY, size * 0.37, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.beginPath();
-                ctx.arc(eyeSpacing, eyeY, size * 0.37, 0, Math.PI * 2);
-                ctx.fill();
-
-                // Eye highlights - bigger sparkles
+            if (isSideView) {
+                // Side view - single eye visible on the turned side
+                const eyeX = turnDirection * size * 0.3;
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
+                ctx.arc(eyeX, eyeY, size * 0.45, 0, Math.PI * 2);
                 ctx.fill();
+
+                if (!anim.isBlinking) {
+                    // Large pupil
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(eyeX, eyeY, size * 0.42, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Eye highlight
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(eyeX - size * 0.08 * turnDirection, eyeY - size * 0.08, size * 0.1, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Blinking
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(eyeX - size * 0.35, eyeY);
+                    ctx.lineTo(eyeX + size * 0.35, eyeY);
+                    ctx.stroke();
+                }
+
+                // Side view beak (pointed to the side)
+                ctx.fillStyle = '#FF8C00';
                 ctx.beginPath();
-                ctx.arc(eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
+                ctx.moveTo(turnDirection * size * 0.2, size * 0.3);
+                ctx.lineTo(turnDirection * size * 0.6, size * 0.25 + anim.beakOpen * 2);
+                ctx.lineTo(turnDirection * size * 0.5, size * 0.4 + anim.beakOpen * 3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Upper beak side
+                ctx.beginPath();
+                ctx.moveTo(turnDirection * size * 0.2, size * 0.3);
+                ctx.lineTo(turnDirection * size * 0.6, size * 0.25 - anim.beakOpen * 2);
+                ctx.lineTo(turnDirection * size * 0.5, size * 0.15);
+                ctx.closePath();
                 ctx.fill();
             } else {
-                // Blinking (closed eyes)
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2;
+                // Frontal view - both eyes visible
+                // Left eye
+                ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
-                ctx.moveTo(-eyeSpacing - size * 0.3, eyeY);
-                ctx.lineTo(-eyeSpacing + size * 0.3, eyeY);
-                ctx.stroke();
+                ctx.arc(-eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Right eye
                 ctx.beginPath();
-                ctx.moveTo(eyeSpacing - size * 0.3, eyeY);
-                ctx.lineTo(eyeSpacing + size * 0.3, eyeY);
-                ctx.stroke();
+                ctx.arc(eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (!anim.isBlinking) {
+                    // Pupils - very large anime-style (almost no white showing)
+                    ctx.fillStyle = '#000000';
+                    ctx.beginPath();
+                    ctx.arc(-eyeSpacing, eyeY, size * 0.37, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(eyeSpacing, eyeY, size * 0.37, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Eye highlights - bigger sparkles
+                    ctx.fillStyle = '#FFFFFF';
+                    ctx.beginPath();
+                    ctx.arc(-eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // Blinking (closed eyes)
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(-eyeSpacing - size * 0.3, eyeY);
+                    ctx.lineTo(-eyeSpacing + size * 0.3, eyeY);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(eyeSpacing - size * 0.3, eyeY);
+                    ctx.lineTo(eyeSpacing + size * 0.3, eyeY);
+                    ctx.stroke();
+                }
+
+                // Frontal beak - smaller and cuter
+                ctx.fillStyle = '#FF8C00';
+                ctx.beginPath();
+                ctx.moveTo(0, size * 0.3);
+                ctx.lineTo(-size * 0.1, size * 0.45 + anim.beakOpen * 3);
+                ctx.lineTo(size * 0.1, size * 0.45 + anim.beakOpen * 3);
+                ctx.closePath();
+                ctx.fill();
+
+                // Upper beak
+                ctx.beginPath();
+                ctx.moveTo(0, size * 0.3);
+                ctx.lineTo(-size * 0.1, size * 0.45 - anim.beakOpen * 2);
+                ctx.lineTo(size * 0.1, size * 0.45 - anim.beakOpen * 2);
+                ctx.closePath();
+                ctx.fill();
             }
-
-            // Beak - smaller and cuter
-            ctx.fillStyle = '#FF8C00';
-            ctx.beginPath();
-            ctx.moveTo(0, size * 0.3);
-            ctx.lineTo(-size * 0.1, size * 0.45 + anim.beakOpen * 3);
-            ctx.lineTo(size * 0.1, size * 0.45 + anim.beakOpen * 3);
-            ctx.closePath();
-            ctx.fill();
-
-            // Upper beak
-            ctx.beginPath();
-            ctx.moveTo(0, size * 0.3);
-            ctx.lineTo(-size * 0.1, size * 0.45 - anim.beakOpen * 2);
-            ctx.lineTo(size * 0.1, size * 0.45 - anim.beakOpen * 2);
-            ctx.closePath();
-            ctx.fill();
 
             ctx.restore();
 
@@ -6765,6 +6822,23 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             }
             const targetTilt = anim.headTiltDirection * 0.15;
             anim.headTilt += (targetTilt - anim.headTilt) * 0.05;
+
+            // Head turn left/right (looking around)
+            anim.headTurnTimer += deltaTime;
+            if (anim.headTurnTimer > 3000 && Math.random() < 0.0008) {
+                // Choose a new target: forward, left, or right
+                const rand = Math.random();
+                if (rand < 0.33) {
+                    anim.headTurnTarget = 0; // Forward
+                } else if (rand < 0.66) {
+                    anim.headTurnTarget = -0.85; // Left
+                } else {
+                    anim.headTurnTarget = 0.85; // Right
+                }
+                anim.headTurnTimer = 0;
+            }
+            // Smoothly interpolate to target
+            anim.headTurnAngle += (anim.headTurnTarget - anim.headTurnAngle) * 0.03;
 
             // Beak open/close (chirping)
             anim.beakOpenTimer += deltaTime;
