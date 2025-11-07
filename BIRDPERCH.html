@@ -7199,8 +7199,19 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                                     osc.stop(currentTime + duration + 0.01);
                                 }
 
-                                // Show music note emoji
-                                anim.currentEmote = ['♪', '♫', '🎵', '🎶'][Math.floor(Math.random() * 4)];
+                                // Show music note emoji AND cute emoji
+                                const musicEmojis = ['♪', '♫', '🎵', '🎶'];
+                                const clickEmojis = [
+                                    '💕', '❤️', '💖', '💗', '💓', '💝', // Hearts
+                                    '✨', '⭐', '🌟', '💫', '🌠', // Sparkles
+                                    '😊', '😍', '🥰', '😘', // Happy faces
+                                    '🌸', '🌺', '🌻', '🌹', '🌷', // Flowers
+                                    '🦋', '🐝', '🌈', '☀️', '🌤️' // Nature
+                                ];
+                                // 70% music emojis, 30% cute emojis
+                                anim.currentEmote = Math.random() < 0.7 ?
+                                    musicEmojis[Math.floor(Math.random() * musicEmojis.length)] :
+                                    clickEmojis[Math.floor(Math.random() * clickEmojis.length)];
                                 anim.emoteTimer = 0;
                                 anim.emoteY = 0;
 
