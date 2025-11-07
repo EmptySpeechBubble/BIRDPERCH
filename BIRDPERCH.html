@@ -423,6 +423,10 @@
                     <input type="checkbox" id="curtainsToggle" style="margin-right: 5px;">
                     🎀
                 </label>
+                <label style="cursor: pointer; user-select: none;" title="Quiet Mode - Reduce Chirping by 80%">
+                    <input type="checkbox" id="quietModeToggle" style="margin-right: 5px;">
+                    🤫
+                </label>
             </div>
             <button id="screenshotBtn" class="screenshot-btn">📷 Take Screenshot</button>
             <button id="manualBtn" class="manual-btn">📖 Guide & Features</button>
@@ -454,7 +458,7 @@
             <button id="toggleMushroomModeBtn">🍄 Mushroom Mode</button>
             <button id="spawnGameboyBtn">🎮 Spawn Gameboy</button>
             <button id="spawnSillBirdBtn">🐦 Spawn Bird on Sill</button>
-            <button id="toggleSleepingSillBirdsBtn">💤 Sleeping Sill Birds: OFF</button>
+            <button id="spawnSleepingSillBirdBtn">💤 Spawn Sleeping Bird on Sill</button>
             <button id="testChirpBtn">🎵 Test Chirps</button>
             <button id="addRatBtn">🐀 Add Rat</button>
             <button id="spawnPondBtn">💧 Spawn Pond</button>
@@ -2138,7 +2142,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const MAX_SILL_BIRDS = 3; // Maximum birds on sill at once
         const SILL_TRANSITION_DURATION = 1000; // 1 second transition time (ms)
         const SILL_APPROACH_DISTANCE = 150; // Start transition when this close to sill
-        let sleepingSillBirdsEnabled = false; // Toggle for sleeping sill birds
+        let quietModeEnabled = false; // 80% reduction in chirping for chill vibe
 
         // Garden Diary System
         let diaryEntries = []; // Array of {day: number, event: string, timestamp: number, type: string}
@@ -6809,8 +6813,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             const anim = bird.sillAnimation;
 
-            // Check if sleeping enabled and randomly put birds to sleep
-            if (sleepingSillBirdsEnabled && !anim.isSleeping && !anim.sleepStartTime) {
+            // Randomly put birds to sleep (natural behavior)
+            if (!anim.isSleeping && !anim.sleepStartTime) {
                 // Random chance to fall asleep (0.02% per frame)
                 if (Math.random() < 0.0002) {
                     anim.isSleeping = true;
@@ -6965,10 +6969,19 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                                 footTimer: 0,
                                 emoteTimer: 0,
                                 currentEmote: null,
-                                emoteY: 0
+                                emoteY: 0,
+                                isSleeping: bird.shouldSleepOnSill || false,
+                                sleepStartTime: bird.shouldSleepOnSill ? Date.now() : 0,
+                                zzzTimer: 0,
+                                headTurnAngle: 0,
+                                headTurnTarget: 0,
+                                headTurnTimer: 0
                             };
 
-                            debugLog('Bird landed on sill with animation initialized');
+                            // Clear the flag after use
+                            bird.shouldSleepOnSill = false;
+
+                            debugLog('Bird landed on sill with animation initialized' + (bird.sillAnimation.isSleeping ? ' (sleeping)' : ''));
                         } else {
                             // Draw bird in transition
                             drawBirdInTransition(bird);
@@ -11657,7 +11670,9 @@ if (this.state === BIRD_STATES.FLYING) {
                         this.applyForce({ x: 0, y: GRAVITY });
 
                         // Random chirping while idle (ambient sounds)
-                        if (Math.random() < 0.005) { // ~0.5% chance per frame (ambient)
+                        // Reduce by 80% if quiet mode is enabled
+                        const chirpChance = quietModeEnabled ? 0.001 : 0.005;
+                        if (Math.random() < chirpChance) { // ~0.5% chance per frame (ambient), or 0.1% in quiet mode
                             const chirpTypes = [CHIRP_TYPES.SOCIAL, CHIRP_TYPES.CONTACT_CALL];
                             this.chirp(chirpTypes[Math.floor(Math.random() * chirpTypes.length)], 0.5);
                         }
@@ -11875,7 +11890,9 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                             }
 
                             // Random chirping while perched (ambient sounds)
-                            if (Math.random() < 0.008) { // ~0.8% chance per frame
+                            // Reduce by 80% if quiet mode is enabled
+                            const perchChirpChance = quietModeEnabled ? 0.0016 : 0.008;
+                            if (Math.random() < perchChirpChance) { // ~0.8% chance per frame, or 0.16% in quiet mode
                                 const chirpTypes = [CHIRP_TYPES.SOCIAL, CHIRP_TYPES.CONTACT_CALL, CHIRP_TYPES.TERRITORIAL];
                                 this.chirp(chirpTypes[Math.floor(Math.random() * chirpTypes.length)], 0.6);
                             }
@@ -25073,6 +25090,15 @@ function drawFullScene() {
         });
     }
 
+    // Quiet Mode toggle
+    const quietModeToggle = document.getElementById('quietModeToggle');
+    if (quietModeToggle) {
+        quietModeToggle.addEventListener('change', () => {
+            quietModeEnabled = quietModeToggle.checked;
+            debugLog(`Quiet mode: ${quietModeEnabled ? 'enabled (80% less chirping)' : 'disabled'}`);
+        });
+    }
+
     // Garden Diary handlers
     const diaryToggle = document.getElementById('diaryToggle');
     const gardenDiary = document.getElementById('gardenDiary');
@@ -25612,23 +25638,55 @@ spawnSillBirdBtn.addEventListener('click', () => {
     debugLog(`Bird approaching window sill at position ${sillBirdCount + 1}`);
 });
 
-// Toggle sleeping sill birds
-const toggleSleepingSillBirdsBtn = document.getElementById('toggleSleepingSillBirdsBtn');
-toggleSleepingSillBirdsBtn.addEventListener('click', () => {
-    sleepingSillBirdsEnabled = !sleepingSillBirdsEnabled;
-    toggleSleepingSillBirdsBtn.textContent = sleepingSillBirdsEnabled ?
-        '💤 Sleeping Sill Birds: ON' : '💤 Sleeping Sill Birds: OFF';
-    debugLog(`Sleeping sill birds: ${sleepingSillBirdsEnabled ? 'enabled' : 'disabled'}`);
-
-    // Wake any currently sleeping birds if disabling
-    if (!sleepingSillBirdsEnabled) {
-        sillPerchSpots.forEach(spot => {
-            if (spot.occupied && spot.bird && spot.bird.sillAnimation) {
-                spot.bird.sillAnimation.isSleeping = false;
-                spot.bird.sillAnimation.sleepStartTime = 0;
-            }
-        });
+// Spawn a sleeping bird on the sill
+const spawnSleepingSillBirdBtn = document.getElementById('spawnSleepingSillBirdBtn');
+spawnSleepingSillBirdBtn.addEventListener('click', () => {
+    if (!windowSillEnabled) {
+        debugLog("Window sill must be enabled first!");
+        return;
     }
+
+    initializeSillPerchSpots(); // Ensure spots are initialized
+
+    const availableSpots = sillPerchSpots.filter(spot => !spot.occupied);
+    const sillBirdCount = sillPerchSpots.filter(spot => spot.occupied).length;
+
+    if (availableSpots.length === 0 || sillBirdCount >= MAX_SILL_BIRDS) {
+        debugLog(`Sill is full (${sillBirdCount}/${MAX_SILL_BIRDS} birds)`);
+        return;
+    }
+
+    // Spawn a new bird or use existing one
+    let bird;
+    if (birds.length > 0 && Math.random() < 0.7) {
+        // Use existing bird
+        bird = birds[Math.floor(Math.random() * birds.length)];
+    } else {
+        // Spawn new bird
+        const birdType = BIRD_TYPES[Math.floor(Math.random() * BIRD_TYPES.length)];
+        bird = new Bird(false, birdType, canvas.width / 2, canvas.height * 0.3);
+        birds.push(bird);
+    }
+
+    // Choose random available spot
+    const chosenSpot = availableSpots[Math.floor(Math.random() * availableSpots.length)];
+    chosenSpot.occupied = true;
+    chosenSpot.bird = bird;
+
+    // Start transition to sill
+    bird.sillTransitionProgress = 0;
+    bird.sillTransitionDirection = 'approaching';
+    bird.sillTargetSpot = chosenSpot;
+    bird.state = BIRD_STATES.FLYING;
+    bird.stateTimer = 0;
+
+    // Mark bird to sleep immediately when it lands
+    bird.shouldSleepOnSill = true;
+
+    // Fly to sill spot
+    bird.generatePath(chosenSpot.x, chosenSpot.y);
+
+    debugLog(`Sleeping bird approaching window sill at position ${sillBirdCount + 1}`);
 });
 
 // Test all chirp types
