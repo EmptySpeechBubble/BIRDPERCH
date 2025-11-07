@@ -454,6 +454,7 @@
             <button id="toggleMushroomModeBtn">🍄 Mushroom Mode</button>
             <button id="spawnGameboyBtn">🎮 Spawn Gameboy</button>
             <button id="spawnSillBirdBtn">🐦 Spawn Bird on Sill</button>
+            <button id="toggleSleepingSillBirdsBtn">💤 Sleeping Sill Birds: OFF</button>
             <button id="testChirpBtn">🎵 Test Chirps</button>
             <button id="addRatBtn">🐀 Add Rat</button>
             <button id="spawnPondBtn">💧 Spawn Pond</button>
@@ -2137,6 +2138,7 @@ let rainsCompleted = 0; // Track number of completed rain events (for pond forma
         const MAX_SILL_BIRDS = 3; // Maximum birds on sill at once
         const SILL_TRANSITION_DURATION = 1000; // 1 second transition time (ms)
         const SILL_APPROACH_DISTANCE = 150; // Start transition when this close to sill
+        let sleepingSillBirdsEnabled = false; // Toggle for sleeping sill birds
 
         // Garden Diary System
         let diaryEntries = []; // Array of {day: number, event: string, timestamp: number, type: string}
@@ -6492,7 +6494,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     footShuffleTimer: 0,
                     emoteTimer: 0,
                     currentEmote: null,
-                    emoteY: 0
+                    emoteY: 0,
+                    isSleeping: false,
+                    sleepStartTime: 0,
+                    zzzTimer: 0
                 };
             }
 
@@ -6500,6 +6505,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Body bob (gentle breathing)
             const bobOffset = Math.sin(anim.bodyBob) * 2;
+
+            // If sleeping, reduce movements and force eyes closed
+            const isSleeping = anim.isSleeping;
 
             // Draw body (round, fluffy) - made rounder and fluffier for cuteness
             ctx.fillStyle = bodyColor;
@@ -6563,10 +6571,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             // Eyes - bigger for cuteness
             const eyeY = -size * 0.2;
             const eyeSpacing = size * 0.45;
-            const turnAmount = Math.abs(anim.headTurnAngle);
+            const turnAmount = isSleeping ? 0 : Math.abs(anim.headTurnAngle); // No head turning while sleeping
 
             // Determine if showing side view (turned > 0.6)
-            const isSideView = turnAmount > 0.6;
+            const isSideView = !isSleeping && turnAmount > 0.6;
             const turnDirection = anim.headTurnAngle > 0 ? 1 : -1; // 1 = right, -1 = left
 
             if (isSideView) {
@@ -6577,7 +6585,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 ctx.arc(eyeX, eyeY, size * 0.45, 0, Math.PI * 2);
                 ctx.fill();
 
-                if (!anim.isBlinking) {
+                if (!anim.isBlinking && !isSleeping) {
                     // Large pupil
                     ctx.fillStyle = '#000000';
                     ctx.beginPath();
@@ -6590,7 +6598,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     ctx.arc(eyeX - size * 0.08 * turnDirection, eyeY - size * 0.08, size * 0.1, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
-                    // Blinking
+                    // Blinking or sleeping (closed eyes)
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -6628,7 +6636,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 ctx.arc(eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
                 ctx.fill();
 
-                if (!anim.isBlinking) {
+                if (!anim.isBlinking && !isSleeping) {
                     // Pupils - very large anime-style (almost no white showing)
                     ctx.fillStyle = '#000000';
                     ctx.beginPath();
@@ -6647,7 +6655,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     ctx.arc(eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
                     ctx.fill();
                 } else {
-                    // Blinking (closed eyes)
+                    // Blinking or sleeping (closed eyes)
                     ctx.strokeStyle = '#000000';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
@@ -6801,90 +6809,122 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             const anim = bird.sillAnimation;
 
-            // Body bob
+            // Check if sleeping enabled and randomly put birds to sleep
+            if (sleepingSillBirdsEnabled && !anim.isSleeping && !anim.sleepStartTime) {
+                // Random chance to fall asleep (0.02% per frame)
+                if (Math.random() < 0.0002) {
+                    anim.isSleeping = true;
+                    anim.sleepStartTime = Date.now();
+                    anim.headTurnTarget = 0; // Face forward while sleeping
+                }
+            }
+
+            // Body bob (gentle breathing - continues while sleeping)
             anim.bodyBob += deltaTime * anim.bodyBobSpeed;
 
-            // Blinking
-            anim.blinkTimer += deltaTime;
-            if (!anim.isBlinking && anim.blinkTimer > anim.blinkInterval) {
-                anim.isBlinking = true;
-                anim.blinkTimer = 0;
-            }
-            if (anim.isBlinking && anim.blinkTimer > anim.blinkDuration) {
-                anim.isBlinking = false;
-                anim.blinkTimer = 0;
-                anim.blinkInterval = 3000 + Math.random() * 2000;
-            }
-
-            // Head tilt (random occasional tilts)
-            if (Math.random() < 0.001) {
-                anim.headTiltDirection = Math.random() < 0.5 ? -1 : 1;
-            }
-            const targetTilt = anim.headTiltDirection * 0.15;
-            anim.headTilt += (targetTilt - anim.headTilt) * 0.05;
-
-            // Head turn left/right (looking around)
-            anim.headTurnTimer += deltaTime;
-            if (anim.headTurnTimer > 3000 && Math.random() < 0.0008) {
-                // Choose a new target: forward, left, or right
-                const rand = Math.random();
-                if (rand < 0.33) {
-                    anim.headTurnTarget = 0; // Forward
-                } else if (rand < 0.66) {
-                    anim.headTurnTarget = -0.85; // Left
-                } else {
-                    anim.headTurnTarget = 0.85; // Right
+            if (anim.isSleeping) {
+                // Sleeping behavior
+                // ZZZ emotes
+                anim.zzzTimer += deltaTime;
+                if (anim.zzzTimer > 2000 && !anim.currentEmote) {
+                    anim.currentEmote = ['💤', '😴', 'zzz'][Math.floor(Math.random() * 3)];
+                    anim.emoteTimer = 0;
+                    anim.emoteY = 0;
+                    anim.zzzTimer = 0;
                 }
-                anim.headTurnTimer = 0;
-            }
-            // Smoothly interpolate to target
-            anim.headTurnAngle += (anim.headTurnTarget - anim.headTurnAngle) * 0.03;
 
-            // Beak open/close (chirping)
-            anim.beakOpenTimer += deltaTime;
-            if (anim.beakOpenTimer > 5000 && Math.random() < 0.0005) {
-                anim.beakOpen = 1;
-                anim.beakOpenTimer = 0;
-                // Show music note
-                if (!anim.currentEmote) {
-                    anim.currentEmote = '♪';
+                // Keep head facing forward
+                anim.headTurnAngle += (0 - anim.headTurnAngle) * 0.03;
+                anim.headTilt += (0 - anim.headTilt) * 0.05;
+
+                // No other movements while sleeping
+                anim.beakOpen = 0;
+                anim.leftFootUp = false;
+                anim.rightFootUp = false;
+            } else {
+                // Awake behavior
+                // Blinking
+                anim.blinkTimer += deltaTime;
+                if (!anim.isBlinking && anim.blinkTimer > anim.blinkInterval) {
+                    anim.isBlinking = true;
+                    anim.blinkTimer = 0;
+                }
+                if (anim.isBlinking && anim.blinkTimer > anim.blinkDuration) {
+                    anim.isBlinking = false;
+                    anim.blinkTimer = 0;
+                    anim.blinkInterval = 3000 + Math.random() * 2000;
+                }
+
+                // Head tilt (random occasional tilts)
+                if (Math.random() < 0.001) {
+                    anim.headTiltDirection = Math.random() < 0.5 ? -1 : 1;
+                }
+                const targetTilt = anim.headTiltDirection * 0.15;
+                anim.headTilt += (targetTilt - anim.headTilt) * 0.05;
+
+                // Head turn left/right (looking around)
+                anim.headTurnTimer += deltaTime;
+                if (anim.headTurnTimer > 3000 && Math.random() < 0.0008) {
+                    // Choose a new target: forward, left, or right
+                    const rand = Math.random();
+                    if (rand < 0.33) {
+                        anim.headTurnTarget = 0; // Forward
+                    } else if (rand < 0.66) {
+                        anim.headTurnTarget = -0.85; // Left
+                    } else {
+                        anim.headTurnTarget = 0.85; // Right
+                    }
+                    anim.headTurnTimer = 0;
+                }
+                // Smoothly interpolate to target
+                anim.headTurnAngle += (anim.headTurnTarget - anim.headTurnAngle) * 0.03;
+
+                // Beak open/close (chirping)
+                anim.beakOpenTimer += deltaTime;
+                if (anim.beakOpenTimer > 5000 && Math.random() < 0.0005) {
+                    anim.beakOpen = 1;
+                    anim.beakOpenTimer = 0;
+                    // Show music note
+                    if (!anim.currentEmote) {
+                        anim.currentEmote = '♪';
+                        anim.emoteTimer = 0;
+                        anim.emoteY = 0;
+                    }
+                }
+                if (anim.beakOpen > 0) {
+                    anim.beakOpen -= 0.05;
+                }
+
+                // Foot shuffle
+                anim.footShuffleTimer += deltaTime;
+                if (anim.footShuffleTimer > 8000 && Math.random() < 0.0003) {
+                    anim.leftFootUp = !anim.leftFootUp;
+                    setTimeout(() => {
+                        anim.rightFootUp = !anim.rightFootUp;
+                        setTimeout(() => {
+                            anim.leftFootUp = false;
+                            anim.rightFootUp = false;
+                        }, 200);
+                    }, 200);
+                    anim.footShuffleTimer = 0;
+                }
+
+                // Random emotes (awake only)
+                if (!anim.currentEmote && Math.random() < 0.0002) {
+                    const emotes = ['❓', '✨', '🎵'];
+                    anim.currentEmote = emotes[Math.floor(Math.random() * emotes.length)];
                     anim.emoteTimer = 0;
                     anim.emoteY = 0;
                 }
             }
-            if (anim.beakOpen > 0) {
-                anim.beakOpen -= 0.05;
-            }
 
-            // Foot shuffle
-            anim.footShuffleTimer += deltaTime;
-            if (anim.footShuffleTimer > 8000 && Math.random() < 0.0003) {
-                anim.leftFootUp = !anim.leftFootUp;
-                setTimeout(() => {
-                    anim.rightFootUp = !anim.rightFootUp;
-                    setTimeout(() => {
-                        anim.leftFootUp = false;
-                        anim.rightFootUp = false;
-                    }, 200);
-                }, 200);
-                anim.footShuffleTimer = 0;
-            }
-
-            // Emote float up and fade
+            // Emote float up and fade (happens in both states)
             if (anim.currentEmote) {
                 anim.emoteTimer += deltaTime;
                 anim.emoteY += deltaTime * 0.02;
                 if (anim.emoteTimer > 2000) {
                     anim.currentEmote = null;
                 }
-            }
-
-            // Random emotes
-            if (!anim.currentEmote && Math.random() < 0.0002) {
-                const emotes = ['❓', '💤', '✨'];
-                anim.currentEmote = emotes[Math.floor(Math.random() * emotes.length)];
-                anim.emoteTimer = 0;
-                anim.emoteY = 0;
             }
         }
 
@@ -7067,26 +7107,50 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                         // Clicked on sill bird!
                         const anim = spot.bird.sillAnimation;
                         if (anim) {
-                            // Show random cute emoji
-                            const clickEmojis = [
-                                '💕', '❤️', '💖', '💗', '💓', '💝', // Hearts
-                                '✨', '⭐', '🌟', '💫', '🌠', // Sparkles
-                                '🎵', '🎶', '🎼', '♪', '♫', // Music
-                                '😊', '😍', '🥰', '😘', // Happy faces
-                                '🌸', '🌺', '🌻', '🌹', '🌷', // Flowers
-                                '🦋', '🐝', '🌈', '☀️', '🌤️' // Nature
-                            ];
-                            anim.currentEmote = clickEmojis[Math.floor(Math.random() * clickEmojis.length)];
-                            anim.emoteTimer = 0;
-                            anim.emoteY = 0;
+                            // Check if sleeping
+                            if (anim.isSleeping) {
+                                // Wake up startled!
+                                anim.isSleeping = false;
+                                anim.sleepStartTime = 0;
 
-                            // Open beak (chirp)
-                            anim.beakOpen = 1;
+                                // Show startled emoji
+                                anim.currentEmote = '!';
+                                anim.emoteTimer = 0;
+                                anim.emoteY = 0;
 
-                            // Play chirp sound
-                            playChirpSound();
+                                // Make bird fly away
+                                spot.bird.isOnSill = false;
+                                spot.bird.sillSpot = null;
+                                spot.bird.sillPerchTimer = 0;
+                                spot.bird.sillTransitionProgress = 0;
+                                spot.bird.sillTransitionDirection = 'leaving';
+                                spot.bird.sillAnimation = null;
+                                spot.occupied = false;
+                                spot.bird = null;
 
-                            debugLog(`Clicked sill bird - ${anim.currentEmote}!`);
+                                debugLog('Woke sleeping sill bird - flying away startled!');
+                            } else {
+                                // Normal awake bird click - show cute emoji
+                                const clickEmojis = [
+                                    '💕', '❤️', '💖', '💗', '💓', '💝', // Hearts
+                                    '✨', '⭐', '🌟', '💫', '🌠', // Sparkles
+                                    '🎵', '🎶', '🎼', '♪', '♫', // Music
+                                    '😊', '😍', '🥰', '😘', // Happy faces
+                                    '🌸', '🌺', '🌻', '🌹', '🌷', // Flowers
+                                    '🦋', '🐝', '🌈', '☀️', '🌤️' // Nature
+                                ];
+                                anim.currentEmote = clickEmojis[Math.floor(Math.random() * clickEmojis.length)];
+                                anim.emoteTimer = 0;
+                                anim.emoteY = 0;
+
+                                // Open beak (chirp)
+                                anim.beakOpen = 1;
+
+                                // Play chirp sound
+                                playChirpSound();
+
+                                debugLog(`Clicked sill bird - ${anim.currentEmote}!`);
+                            }
                         }
                         return true;
                     }
@@ -25534,6 +25598,25 @@ spawnSillBirdBtn.addEventListener('click', () => {
     bird.generatePath(chosenSpot.x, chosenSpot.y);
 
     debugLog(`Bird approaching window sill at position ${sillBirdCount + 1}`);
+});
+
+// Toggle sleeping sill birds
+const toggleSleepingSillBirdsBtn = document.getElementById('toggleSleepingSillBirdsBtn');
+toggleSleepingSillBirdsBtn.addEventListener('click', () => {
+    sleepingSillBirdsEnabled = !sleepingSillBirdsEnabled;
+    toggleSleepingSillBirdsBtn.textContent = sleepingSillBirdsEnabled ?
+        '💤 Sleeping Sill Birds: ON' : '💤 Sleeping Sill Birds: OFF';
+    debugLog(`Sleeping sill birds: ${sleepingSillBirdsEnabled ? 'enabled' : 'disabled'}`);
+
+    // Wake any currently sleeping birds if disabling
+    if (!sleepingSillBirdsEnabled) {
+        sillPerchSpots.forEach(spot => {
+            if (spot.occupied && spot.bird && spot.bird.sillAnimation) {
+                spot.bird.sillAnimation.isSleeping = false;
+                spot.bird.sillAnimation.sleepStartTime = 0;
+            }
+        });
+    }
 });
 
 // Test all chirp types
