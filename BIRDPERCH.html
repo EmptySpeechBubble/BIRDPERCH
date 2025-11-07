@@ -6279,8 +6279,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.clip();
 
             // Curtain positioned inside the frame
-            const curtainWidth = canvas.width * 0.15; // 15% of screen width (bunched up at sides)
-            const curtainTop = topThickness;
+            const curtainWidth = canvas.width * 0.25; // 25% of screen width (fuller curtains)
+            const curtainInset = 15; // Inset from frame edges to appear more inside
+            const curtainTop = topThickness + curtainInset;
             const curtainBottom = canvas.height - bottomThickness;
             const curtainHeight = curtainBottom - curtainTop;
 
@@ -6288,8 +6289,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Function to draw one curtain panel with realistic pleats
             function drawCurtainPanel(isLeft) {
-                const panelX = isLeft ? sideThickness : canvas.width - sideThickness - curtainWidth;
-                const pleatCount = 8; // Number of vertical pleats
+                const panelX = isLeft ? sideThickness + curtainInset : canvas.width - sideThickness - curtainWidth - curtainInset;
+                const pleatCount = 14; // Number of vertical pleats (more pleats = fuller look)
                 const pleatWidth = curtainWidth / pleatCount;
 
                 // First, draw sheer translucent fabric behind the pleats (fills the whole panel area)
@@ -6390,28 +6391,29 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.save();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-            const leftPanelX = sideThickness;
-            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.15);
-            const rodHolderY = topThickness + 5;
+            const curtainInsetForRods = 15; // Match the curtain inset
+            const leftPanelX = sideThickness + curtainInsetForRods;
+            const rightPanelX = canvas.width - sideThickness - (canvas.width * 0.25) - curtainInsetForRods;
+            const rodHolderY = topThickness + curtainInsetForRods + 5;
 
             // Left rod holder
             ctx.fillStyle = '#8B7355'; // Brass/bronze color
             ctx.beginPath();
-            ctx.arc(leftPanelX + (canvas.width * 0.15) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.arc(leftPanelX + (canvas.width * 0.25) / 2, rodHolderY, 4, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#C9A961';
             ctx.beginPath();
-            ctx.arc(leftPanelX + (canvas.width * 0.15) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.arc(leftPanelX + (canvas.width * 0.25) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
             ctx.fill();
 
             // Right rod holder
             ctx.fillStyle = '#8B7355';
             ctx.beginPath();
-            ctx.arc(rightPanelX + (canvas.width * 0.15) / 2, rodHolderY, 4, 0, Math.PI * 2);
+            ctx.arc(rightPanelX + (canvas.width * 0.25) / 2, rodHolderY, 4, 0, Math.PI * 2);
             ctx.fill();
             ctx.fillStyle = '#C9A961';
             ctx.beginPath();
-            ctx.arc(rightPanelX + (canvas.width * 0.15) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
+            ctx.arc(rightPanelX + (canvas.width * 0.25) / 2 - 1, rodHolderY - 1, 2, 0, Math.PI * 2);
             ctx.fill();
 
             ctx.restore();
@@ -6424,7 +6426,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             const sideThickness = 40;
             const bottomThickness = 60;
-            const sillY = canvas.height - bottomThickness + 15; // On top of sill
+            const sillY = canvas.height - bottomThickness - 20; // Bumped up higher on sill (about half an inch)
             const usableWidth = canvas.width - (sideThickness * 2);
             const spacing = usableWidth / (SILL_PERCH_COUNT + 1);
 
@@ -6472,10 +6474,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             // Body bob (gentle breathing)
             const bobOffset = Math.sin(anim.bodyBob) * 2;
 
-            // Draw body (round, fluffy)
+            // Draw body (round, fluffy) - made rounder and fluffier for cuteness
             ctx.fillStyle = bodyColor;
             ctx.beginPath();
-            ctx.ellipse(x, y + bobOffset, size * 1.2, size * 1.4, 0, 0, Math.PI * 2);
+            ctx.ellipse(x, y + bobOffset, size * 1.3, size * 1.5, 0, 0, Math.PI * 2);
             ctx.fill();
 
             // Draw wings on sides
@@ -6525,44 +6527,44 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             ctx.translate(x, y - size * 0.6 + bobOffset);
             ctx.rotate(anim.headTilt);
 
-            // Head
+            // Head - bigger and rounder for cuteness
             ctx.fillStyle = bodyColor;
             ctx.beginPath();
-            ctx.arc(0, 0, size * 0.9, 0, Math.PI * 2);
+            ctx.arc(0, 0, size * 1.0, 0, Math.PI * 2);
             ctx.fill();
 
-            // Eyes
+            // Eyes - bigger for cuteness
             const eyeY = -size * 0.2;
-            const eyeSpacing = size * 0.4;
+            const eyeSpacing = size * 0.45;
 
             // Left eye
             ctx.fillStyle = '#FFFFFF';
             ctx.beginPath();
-            ctx.arc(-eyeSpacing, eyeY, size * 0.3, 0, Math.PI * 2);
+            ctx.arc(-eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
             ctx.fill();
 
             // Right eye
             ctx.beginPath();
-            ctx.arc(eyeSpacing, eyeY, size * 0.3, 0, Math.PI * 2);
+            ctx.arc(eyeSpacing, eyeY, size * 0.4, 0, Math.PI * 2);
             ctx.fill();
 
             if (!anim.isBlinking) {
-                // Pupils
+                // Pupils - bigger and rounder
                 ctx.fillStyle = '#000000';
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing, eyeY, size * 0.15, 0, Math.PI * 2);
+                ctx.arc(-eyeSpacing, eyeY, size * 0.2, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(eyeSpacing, eyeY, size * 0.15, 0, Math.PI * 2);
+                ctx.arc(eyeSpacing, eyeY, size * 0.2, 0, Math.PI * 2);
                 ctx.fill();
 
-                // Eye highlights
+                // Eye highlights - bigger sparkles
                 ctx.fillStyle = '#FFFFFF';
                 ctx.beginPath();
-                ctx.arc(-eyeSpacing - size * 0.05, eyeY - size * 0.05, size * 0.06, 0, Math.PI * 2);
+                ctx.arc(-eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.beginPath();
-                ctx.arc(eyeSpacing - size * 0.05, eyeY - size * 0.05, size * 0.06, 0, Math.PI * 2);
+                ctx.arc(eyeSpacing - size * 0.06, eyeY - size * 0.06, size * 0.09, 0, Math.PI * 2);
                 ctx.fill();
             } else {
                 // Blinking (closed eyes)
@@ -6578,20 +6580,29 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 ctx.stroke();
             }
 
-            // Beak
+            // Cute cheek blush spots
+            ctx.fillStyle = 'rgba(255, 192, 203, 0.5)'; // Light pink blush
+            ctx.beginPath();
+            ctx.arc(-eyeSpacing - size * 0.15, eyeY + size * 0.3, size * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(eyeSpacing + size * 0.15, eyeY + size * 0.3, size * 0.15, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Beak - smaller and cuter
             ctx.fillStyle = '#FF8C00';
             ctx.beginPath();
-            ctx.moveTo(0, size * 0.2);
-            ctx.lineTo(-size * 0.15, size * 0.4 + anim.beakOpen * 3);
-            ctx.lineTo(size * 0.15, size * 0.4 + anim.beakOpen * 3);
+            ctx.moveTo(0, size * 0.3);
+            ctx.lineTo(-size * 0.1, size * 0.45 + anim.beakOpen * 3);
+            ctx.lineTo(size * 0.1, size * 0.45 + anim.beakOpen * 3);
             ctx.closePath();
             ctx.fill();
 
             // Upper beak
             ctx.beginPath();
-            ctx.moveTo(0, size * 0.2);
-            ctx.lineTo(-size * 0.15, size * 0.4 - anim.beakOpen * 2);
-            ctx.lineTo(size * 0.15, size * 0.4 - anim.beakOpen * 2);
+            ctx.moveTo(0, size * 0.3);
+            ctx.lineTo(-size * 0.1, size * 0.45 - anim.beakOpen * 2);
+            ctx.lineTo(size * 0.1, size * 0.45 - anim.beakOpen * 2);
             ctx.closePath();
             ctx.fill();
 
