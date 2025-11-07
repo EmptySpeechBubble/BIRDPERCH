@@ -12862,31 +12862,77 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 debugLog(`Bird finished bathing, now preening`);
                             }
                         } else {
-                            // FIX: Move toward water source (puddle or pond)
-                            const dx = nearestWater.x - this.x;
-                            const dy = nearestWater.y - this.y;
-                            const dir = normalize(dx, dy);
+                            // FIX: Follow path to water source, or fly toward it if no path
+                            if (this.path && this.path.length > 0 && this.pathIndex < this.path.length) {
+                                // Follow the path we generated
+                                const waypoint = this.path[this.pathIndex];
+                                const waypointDist = distance(this.x, this.y, waypoint.x, waypoint.y);
 
-                            this.applyForce({
-                                x: dir.x * 0.01,
-                                y: dir.y * 0.01
-                            });
+                                if (waypointDist < 30) {
+                                    // Reached waypoint
+                                    this.pathIndex++;
+                                }
 
-                            // Face direction of movement
-                            if (Math.abs(dx) > 2) {
-                                this.direction = dx > 0 ? 1 : -1;
+                                if (this.pathIndex >= this.path.length) {
+                                    // Reached end of path, regenerate if still far from water
+                                    if (minDist > bathingRadius) {
+                                        this.generatePath(nearestWater.x, nearestWater.y, true);
+                                        this.pathIndex = 0;
+                                    }
+                                } else {
+                                    // Fly toward waypoint
+                                    const dx = waypoint.x - this.x;
+                                    const dy = waypoint.y - this.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                    if (dist > 0) {
+                                        const forceStrength = Math.min(0.15, dist * 0.001);
+                                        this.applyForce({
+                                            x: (dx / dist) * forceStrength,
+                                            y: (dy / dist) * forceStrength
+                                        });
+                                    }
+                                }
+                            } else {
+                                // No path, fly directly toward water
+                                const dx = nearestWater.x - this.x;
+                                const dy = nearestWater.y - this.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                if (dist > 0) {
+                                    const forceStrength = Math.min(0.15, dist * 0.001);
+                                    this.applyForce({
+                                        x: (dx / dist) * forceStrength,
+                                        y: (dy / dist) * forceStrength
+                                    });
+                                }
                             }
 
-                            // If taking too long to reach water, give up
-                            if (this.stateTimer > 5000) {
-                                this.state = BIRD_STATES.FLYING;
-                                this.stateTimer = 0;
-                                
-                                // Fly somewhere else
-                                this.generatePath(
-                                    Math.random() * canvas.width,
-                                    100 + Math.random() * (canvas.height * 0.3)
-                                );
+                            // Face direction of movement
+                            if (Math.abs(this.velocity.x) > 0.5) {
+                                this.direction = this.velocity.x > 0 ? 1 : -1;
+                            }
+
+                            // If taking too long to reach water, give up and regenerate path
+                            if (this.stateTimer > 8000) {
+                                // Try once more with a fresh path
+                                if (this.stateTimer < 10000) {
+                                    this.generatePath(nearestWater.x, nearestWater.y, true);
+                                    this.pathIndex = 0;
+                                    debugLog('Bird struggling to reach water, regenerating path');
+                                } else {
+                                    // Give up entirely
+                                    this.state = BIRD_STATES.FLYING;
+                                    this.stateTimer = 0;
+                                    this.bathingStarted = false;
+
+                                    // Fly somewhere else
+                                    this.generatePath(
+                                        Math.random() * canvas.width,
+                                        100 + Math.random() * (canvas.height * 0.3)
+                                    );
+                                    debugLog('Bird gave up trying to reach water');
+                                }
                             }
                         }
                         break;
@@ -13019,18 +13065,66 @@ if (shelterChance > 0 && Math.random() < shelterChance) {
                                 }
                             }
                         } else {
-                            // Move toward water
-                            const dx = nearestWater.x - this.x;
-                            const dy = nearestWater.y - this.y;
-                            const dir = normalize(dx, dy);
+                            // FIX: Follow path to water source, or fly toward it if no path
+                            if (this.path && this.path.length > 0 && this.pathIndex < this.path.length) {
+                                // Follow the path we generated
+                                const waypoint = this.path[this.pathIndex];
+                                const waypointDist = distance(this.x, this.y, waypoint.x, waypoint.y);
 
-                            this.applyForce({
-                                x: dir.x * 0.015,
-                                y: dir.y * 0.01
-                            });
+                                if (waypointDist < 30) {
+                                    // Reached waypoint
+                                    this.pathIndex++;
+                                }
 
-                            if (Math.abs(dx) > 2) {
-                                this.direction = dx > 0 ? 1 : -1;
+                                if (this.pathIndex >= this.path.length) {
+                                    // Reached end of path, regenerate if still far from water
+                                    if (waterDist > 15) {
+                                        this.generatePath(nearestWater.x, nearestWater.y, true);
+                                        this.pathIndex = 0;
+                                    }
+                                } else {
+                                    // Fly toward waypoint
+                                    const dx = waypoint.x - this.x;
+                                    const dy = waypoint.y - this.y;
+                                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                    if (dist > 0) {
+                                        const forceStrength = Math.min(0.15, dist * 0.001);
+                                        this.applyForce({
+                                            x: (dx / dist) * forceStrength,
+                                            y: (dy / dist) * forceStrength
+                                        });
+                                    }
+                                }
+                            } else {
+                                // No path, fly directly toward water with stronger force
+                                const dx = nearestWater.x - this.x;
+                                const dy = nearestWater.y - this.y;
+                                const dist = Math.sqrt(dx * dx + dy * dy);
+
+                                if (dist > 0) {
+                                    const forceStrength = Math.min(0.15, dist * 0.001);
+                                    this.applyForce({
+                                        x: (dx / dist) * forceStrength,
+                                        y: (dy / dist) * forceStrength
+                                    });
+                                }
+                            }
+
+                            // Face direction of movement
+                            if (Math.abs(this.velocity.x) > 0.5) {
+                                this.direction = this.velocity.x > 0 ? 1 : -1;
+                            }
+
+                            // If taking too long, give up
+                            if (this.stateTimer > 8000) {
+                                this.state = BIRD_STATES.FLYING;
+                                this.stateTimer = 0;
+                                this.generatePath(
+                                    Math.random() * canvas.width,
+                                    100 + Math.random() * (canvas.height * 0.3)
+                                );
+                                debugLog('Bird gave up trying to reach water for drinking');
                             }
                         }
                         break;
