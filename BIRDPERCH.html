@@ -402,7 +402,7 @@
         <div class="info-panel" id="infoPanel" style="display: none;">
             <h3>Garden Ecosystem</h3>
             <div id="stats"></div>
-            <div style="margin: 10px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="margin: 10px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; align-items: center;">
                 <label style="cursor: pointer; user-select: none;" title="Show Real-Time Clock & Forecast">
                     <input type="checkbox" id="clockToggle" style="margin-right: 5px;">
                     🕐
@@ -6293,22 +6293,24 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
 
             // Function to draw one curtain panel with realistic pleats
             function drawCurtainPanel(isLeft, position) {
-                // Position curtains based on state
-                // position: 0 = at edge (open), 1 = at center (closed)
-                let panelX;
+                // Curtains always extend to edges
+                // position: 0 = minimal coverage, 1 = fully closed
+                let panelX, panelWidth;
                 if (isLeft) {
-                    // Left curtain: 0 means at left edge, 1 means at center minus width
-                    panelX = position * (canvas.width / 2 - curtainWidth);
+                    // Left curtain: always starts at x=0, extends toward center
+                    panelX = 0;
+                    panelWidth = curtainWidth + (position * (canvas.width / 2 - curtainWidth));
                 } else {
-                    // Right curtain: 0 means at right edge, 1 means at center
-                    panelX = canvas.width - curtainWidth - (position * (canvas.width / 2 - curtainWidth));
+                    // Right curtain: always ends at canvas.width, extends toward center
+                    panelWidth = curtainWidth + (position * (canvas.width / 2 - curtainWidth));
+                    panelX = canvas.width - panelWidth;
                 }
                 const pleatCount = 14; // Number of vertical pleats (more pleats = fuller look)
-                const pleatWidth = curtainWidth / pleatCount;
+                const pleatWidth = panelWidth / pleatCount;
 
                 // First, draw sheer translucent fabric behind the pleats (fills the whole panel area)
                 ctx.fillStyle = `${curtainColor.main}20`; // Main color at 12% opacity (20 in hex)
-                ctx.fillRect(panelX, curtainTop, curtainWidth, curtainHeight);
+                ctx.fillRect(panelX, curtainTop, panelWidth, curtainHeight);
 
                 // Add subtle pattern to sheer fabric
                 ctx.strokeStyle = `${curtainColor.main}10`;
@@ -6317,7 +6319,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                     const y = curtainTop + (i * curtainHeight / 20);
                     ctx.beginPath();
                     ctx.moveTo(panelX, y);
-                    ctx.lineTo(panelX + curtainWidth, y);
+                    ctx.lineTo(panelX + panelWidth, y);
                     ctx.stroke();
                 }
 
@@ -6392,18 +6394,18 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                 // Draw curtain rod holder at top (outside clipping region handled below)
             }
 
-            // Calculate curtain panel positions based on state
-            const leftPanelX = curtainLeftPosition * (canvas.width / 2 - curtainWidth);
-            const rightPanelX = canvas.width - curtainWidth - (curtainRightPosition * (canvas.width / 2 - curtainWidth));
+            // Calculate curtain widths based on state
+            const leftPanelWidth = curtainWidth + (curtainLeftPosition * (canvas.width / 2 - curtainWidth));
+            const rightPanelWidth = curtainWidth + (curtainRightPosition * (canvas.width / 2 - curtainWidth));
 
             // First, draw semi-transparent layer for fullness
             ctx.fillStyle = `${curtainColor.main}40`; // 25% opacity (40 in hex)
 
-            // Left side - positioned based on state
-            ctx.fillRect(leftPanelX, curtainTop, curtainWidth, curtainHeight);
+            // Left side - always from left edge
+            ctx.fillRect(0, curtainTop, leftPanelWidth, curtainHeight);
 
-            // Right side - positioned based on state
-            ctx.fillRect(rightPanelX, curtainTop, curtainWidth, curtainHeight);
+            // Right side - always to right edge
+            ctx.fillRect(canvas.width - rightPanelWidth, curtainTop, rightPanelWidth, curtainHeight);
 
             // Draw left curtain panel with position
             drawCurtainPanel(true, curtainLeftPosition);
@@ -6411,12 +6413,12 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             // Draw right curtain panel with position
             drawCurtainPanel(false, curtainRightPosition);
 
-            // Draw curtain rod holders at the top (positioned with curtains)
+            // Draw curtain rod holders at the top (positioned at inner edge of curtains)
             const rodHolderY = 10; // Near top of screen
 
-            // Left rod holder (centered on left curtain)
-            const leftRodX = leftPanelX + curtainWidth / 2;
-            const rightRodX = rightPanelX + curtainWidth / 2;
+            // Left rod holder (at inner edge of left curtain)
+            const leftRodX = leftPanelWidth;
+            const rightRodX = canvas.width - rightPanelWidth;
 
             // Left rod holder
             ctx.fillStyle = '#8B7355'; // Brass/bronze color
@@ -6926,17 +6928,17 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
             if (!curtainsEnabled) return false;
 
             const curtainWidth = canvas.width * 0.25;
-            const leftPanelX = curtainLeftPosition * (canvas.width / 2 - curtainWidth);
-            const rightPanelX = canvas.width - curtainWidth - (curtainRightPosition * (canvas.width / 2 - curtainWidth));
+            const leftPanelWidth = curtainWidth + (curtainLeftPosition * (canvas.width / 2 - curtainWidth));
+            const rightPanelWidth = curtainWidth + (curtainRightPosition * (canvas.width / 2 - curtainWidth));
 
-            // Check if clicked on left curtain
-            if (x >= leftPanelX && x <= leftPanelX + curtainWidth) {
+            // Check if clicked on left curtain (from 0 to leftPanelWidth)
+            if (x >= 0 && x <= leftPanelWidth) {
                 cycleCurtainState();
                 return true;
             }
 
-            // Check if clicked on right curtain
-            if (x >= rightPanelX && x <= rightPanelX + curtainWidth) {
+            // Check if clicked on right curtain (from canvas.width - rightPanelWidth to canvas.width)
+            if (x >= canvas.width - rightPanelWidth && x <= canvas.width) {
                 cycleCurtainState();
                 return true;
             }
