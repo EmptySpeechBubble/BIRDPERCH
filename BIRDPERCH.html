@@ -81,14 +81,14 @@
             position: absolute;
             left: 10px;
             bottom: 50px;
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.9);
             padding: 10px;
             border-radius: 5px;
             z-index: 100;
             display: none;
             max-height: 70vh;
             overflow-y: auto;
-            width: 200px; /* Add this line to make it narrower */
+            width: 420px; /* Wider to fit grid */
         }
         
         .control-group {
@@ -110,6 +110,15 @@
             border-radius: 3px;
             border: 1px solid #ccc;
             background: #f8f8f8;
+            width: calc(50% - 6px); /* Two columns with margins */
+            display: inline-block;
+            box-sizing: border-box;
+            text-align: left;
+            font-size: 12px;
+        }
+
+        .control-panel #keepVisualsBtn {
+            width: 100%; /* Full width for close button */
         }
 
         .control-panel button:hover {
@@ -6806,7 +6815,27 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                             bird.sillTransitionDirection = null;
                             bird.isOnSill = true;
                             bird.state = BIRD_STATES.PERCHED;
-                            debugLog('Bird landed on sill');
+
+                            // Initialize sill animation state
+                            bird.sillAnimation = {
+                                blinkTimer: 0,
+                                blinkDuration: 100,
+                                blinkInterval: 3000 + Math.random() * 2000,
+                                isBlinking: false,
+                                headTilt: 0,
+                                headTiltDirection: 1,
+                                headTiltSpeed: 0.001,
+                                bodyBob: 0,
+                                bodyBobSpeed: 0.002,
+                                beakOpen: 0,
+                                leftFootUp: false,
+                                footTimer: 0,
+                                emoteTimer: 0,
+                                currentEmote: null,
+                                emoteY: 0
+                            };
+
+                            debugLog('Bird landed on sill with animation initialized');
                         } else {
                             // Draw bird in transition
                             drawBirdInTransition(bird);
@@ -6819,7 +6848,8 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                             bird.sillTransitionProgress = 0;
                             bird.sillTransitionDirection = null;
                             bird.isOnSill = false;
-                            debugLog('Bird completed leaving transition');
+                            bird.sillTargetSpot = null;
+                            debugLog('Bird completed leaving transition and returned to flying');
                         } else {
                             // Draw bird in transition
                             drawBirdInTransition(bird);
