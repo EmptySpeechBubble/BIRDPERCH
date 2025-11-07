@@ -6959,6 +6959,9 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                             bird.state = BIRD_STATES.PERCHED;
 
                             // Initialize sill animation state
+                            const shouldBeSleeping = bird.shouldSleepOnSill || false;
+                            debugLog(`Bird landing - shouldSleepOnSill flag: ${bird.shouldSleepOnSill}, will be sleeping: ${shouldBeSleeping}`);
+
                             bird.sillAnimation = {
                                 blinkTimer: 0,
                                 blinkDuration: 100,
@@ -6973,10 +6976,10 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                                 leftFootUp: false,
                                 footTimer: 0,
                                 emoteTimer: 0,
-                                currentEmote: null,
+                                currentEmote: shouldBeSleeping ? '💤' : null,
                                 emoteY: 0,
-                                isSleeping: bird.shouldSleepOnSill || false,
-                                sleepStartTime: bird.shouldSleepOnSill ? Date.now() : 0,
+                                isSleeping: shouldBeSleeping,
+                                sleepStartTime: shouldBeSleeping ? Date.now() : 0,
                                 zzzTimer: 0,
                                 headTurnAngle: 0,
                                 headTurnTarget: 0,
@@ -6986,7 +6989,7 @@ currentHour = Math.floor(((timeOfDay < 1 ? timeOfDay * 12 : 12 + (timeOfDay - 1)
                             // Clear the flag after use
                             bird.shouldSleepOnSill = false;
 
-                            debugLog('Bird landed on sill with animation initialized' + (bird.sillAnimation.isSleeping ? ' (sleeping)' : ''));
+                            debugLog('Bird landed on sill with animation initialized' + (bird.sillAnimation.isSleeping ? ' (SLEEPING)' : ' (AWAKE)'));
                         } else {
                             // Draw bird in transition
                             drawBirdInTransition(bird);
@@ -25752,11 +25755,12 @@ spawnSleepingSillBirdBtn.addEventListener('click', () => {
 
     // Mark bird to sleep immediately when it lands
     bird.shouldSleepOnSill = true;
+    debugLog(`Set shouldSleepOnSill flag to TRUE for bird`);
 
     // Fly to sill spot
     bird.generatePath(chosenSpot.x, chosenSpot.y);
 
-    debugLog(`Sleeping bird approaching window sill at position ${sillBirdCount + 1}`);
+    debugLog(`Sleeping bird approaching window sill at position ${sillBirdCount + 1} - Flag is ${bird.shouldSleepOnSill}`);
 });
 
 // Test all chirp types
